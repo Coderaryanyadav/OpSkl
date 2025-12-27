@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, RefreshControl, Platform } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { View, StyleSheet, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@api/supabase';
@@ -121,7 +120,7 @@ export default function MessageListScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         fetchRooms();
@@ -136,13 +135,19 @@ export default function MessageListScreen() {
         return () => { supabase.removeChannel(subscription); };
     }, [fetchRooms]);
 
-    const handlePress = (room: any) => {
+    const handlePress = useCallback((room: any) => {
         const otherParticipant = room.participants?.[0]?.profiles;
         navigation.navigate('Chat', {
             roomId: room.id,
             recipientName: otherParticipant?.full_name || "Operative"
         });
-    };
+    }, [navigation]);
+
+    const renderItem = useCallback(({ item, index }: { item: any; index: number }) => (
+        <ChatListItem item={item} index={index} onPress={handlePress} />
+    ), [handlePress]);
+
+    const keyExtractor = useCallback((item: any) => item.id, []);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -173,11 +178,6 @@ export default function MessageListScreen() {
         );
     }
 
-    const renderItem = useCallback(({ item, index }: { item: any; index: number }) => (
-        <ChatListItem item={item} index={index} onPress={handlePress} />
-    ), [handlePress]);
-
-    const keyExtractor = useCallback((item: any) => item.id, []);
 
     return (
         <View style={styles.container}>
@@ -193,12 +193,11 @@ export default function MessageListScreen() {
                 />
             </View>
 
-            <FlashList
+            <FlatList
                 data={filteredRooms}
                 renderItem={renderItem}
                 keyExtractor={keyExtractor}
                 contentContainerStyle={styles.list}
-                estimatedItemSize={88}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={AuraColors.primary} />
                 }

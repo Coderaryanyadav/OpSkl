@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Modal, TouchableOpacity, ScrollView, Switch } from 'react-native';
-import { AuraColors, AuraSpacing, AuraBorderRadius } from '@theme/aura';
+import { AuraColors, AuraSpacing } from '@theme/aura';
 import { AuraText } from '@core/components/AuraText';
 import { AuraInput } from '@core/components/AuraInput';
 import { AuraButton } from '@core/components/AuraButton';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { X, Save, Copy } from 'lucide-react-native';
+import { X, Copy } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ApplicationModalProps {

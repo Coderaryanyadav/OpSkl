@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
 import { AuraButton } from '@core/components/AuraButton';
-import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
+import { AuraColors, AuraSpacing, AuraBorderRadius } from '@theme/aura';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuth } from '@context/AuthProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';

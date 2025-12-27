@@ -7,7 +7,7 @@ import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/a
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAuth } from '@context/AuthProvider';
 import { supabase } from '@api/supabase';
-import { Bell, MessageSquare, DollarSign, Star, Zap, Shield } from 'lucide-react-native';
+import { Bell, MessageSquare, IndianRupee, Star, Zap, Shield } from 'lucide-react-native';
 
 interface NotificationPreferences {
     new_gigs: boolean;
@@ -44,7 +44,7 @@ const NOTIFICATION_SETTINGS = [
         key: 'payments' as keyof NotificationPreferences,
         label: 'Payment Alerts',
         description: 'Escrow, withdrawals, deposits',
-        icon: DollarSign,
+        icon: IndianRupee,
         color: AuraColors.success
     },
     {

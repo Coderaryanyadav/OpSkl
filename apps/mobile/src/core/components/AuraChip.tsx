@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import Animated, { FadeInRight, Layout, ZoomIn } from 'react-native-reanimated';
-import { AuraColors, AuraShadows, AuraBorderRadius, AuraSpacing } from '../theme/aura';
+import Animated, { Layout, ZoomIn } from 'react-native-reanimated';
+import { AuraColors, AuraShadows, AuraBorderRadius } from '../theme/aura';
 import { AuraText } from './AuraText';
-import { Check, User, Heart, Briefcase, Star, Zap } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import { useAuraHaptics } from '../hooks/useAuraHaptics';
 
 interface AuraChipProps {

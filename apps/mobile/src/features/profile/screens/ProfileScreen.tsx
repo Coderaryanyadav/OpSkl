@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Dimensions, RefreshControl, ActivityIndicator } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { supabase } from '@api/supabase';

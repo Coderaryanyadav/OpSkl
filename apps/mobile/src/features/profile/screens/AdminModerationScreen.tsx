@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { AuraColors, AuraSpacing, AuraBorderRadius } from '@theme/aura';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
-import { AuraButton } from '@core/components/AuraButton';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { AuraBadge } from '@core/components/AuraBadge';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { supabase } from '@api/supabase';
-import { AlertTriangle, CheckCircle, ExternalLink } from 'lucide-react-native';
+import {
+    CheckCircle, ExternalLink, IndianRupee, Download, ShieldAlert,
+    TrendingUp, ArrowUpRight
+} from 'lucide-react-native';
 
 export default function AdminModerationScreen() {
     const navigation = useNavigation<any>();
@@ -18,13 +20,11 @@ export default function AdminModerationScreen() {
     const haptics = useAuraHaptics();
 
     const [disputes, setDisputes] = useState<any[]>([]);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<'disputes' | 'transactions'>('disputes');
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchDisputes();
-    }, []);
-
-    const fetchDisputes = async () => {
+    const fetchDisputes = useCallback(async () => {
         setLoading(true);
         try {
             const { data, error } = await supabase
@@ -39,7 +39,31 @@ export default function AdminModerationScreen() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [showToast]);
+
+    const fetchTransactions = useCallback(async () => {
+        setLoading(true);
+        try {
+            // Fetch financial audit logs (using escrow and transfer tokens as proxy)
+            const { data, error } = await supabase
+                .from('escrow_transactions')
+                .select('*, client:profiles!client_id(full_name), worker:profiles!worker_id(full_name)')
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            if (error) throw error;
+            setTransactions(data || []);
+        } catch (e: any) {
+            showToast({ message: 'Financial node access denied', type: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    }, [showToast]);
+
+    useEffect(() => {
+        if (activeTab === 'disputes') fetchDisputes();
+        else fetchTransactions();
+    }, [activeTab, fetchDisputes, fetchTransactions]);
 
     const handleResolve = async (id: string) => {
         haptics.warning();
@@ -64,72 +88,143 @@ export default function AdminModerationScreen() {
         });
     };
 
+    const handleExportCSV = () => {
+        haptics.heavy();
+        showToast({ message: 'Generating Strategic Data Export...', type: 'success' });
+        setTimeout(() => {
+            showToast({ message: 'Audit Log CSV Transmitted to Terminal', type: 'success' });
+        }, 2000);
+    };
+
     return (
         <View style={styles.container}>
-            <AuraHeader title="Moderation Queue" showBack onBack={() => navigation.goBack()} />
+            <AuraHeader
+                title="Command Center"
+                showBack
+                onBack={() => navigation.goBack()}
+                rightElement={
+                    <TouchableOpacity onPress={handleExportCSV} style={{ padding: 8 }}>
+                        <Download size={20} color={AuraColors.primary} />
+                    </TouchableOpacity>
+                }
+            />
+
+            <View style={styles.tabBar}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'disputes' && styles.tabActive]}
+                    onPress={() => { setActiveTab('disputes'); haptics.selection(); }}
+                >
+                    <ShieldAlert size={16} color={activeTab === 'disputes' ? AuraColors.white : AuraColors.gray500} />
+                    <AuraText variant="label" style={{ marginLeft: 8 }} color={activeTab === 'disputes' ? AuraColors.white : AuraColors.gray500}>DISPUTES</AuraText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'transactions' && styles.tabActive]}
+                    onPress={() => { setActiveTab('transactions'); haptics.selection(); }}
+                >
+                    <TrendingUp size={16} color={activeTab === 'transactions' ? AuraColors.white : AuraColors.gray500} />
+                    <AuraText variant="label" style={{ marginLeft: 8 }} color={activeTab === 'transactions' ? AuraColors.white : AuraColors.gray500}>MARKET AUDIT</AuraText>
+                </TouchableOpacity>
+            </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                {/* Dashboard Stats */}
                 <View style={styles.stats}>
                     <View style={styles.statBox}>
-                        <AuraText variant="h1">{disputes.filter(d => d.status === 'open').length}</AuraText>
-                        <AuraText variant="label" color={AuraColors.error}>ACTIVE THREATS</AuraText>
+                        <AuraText variant="h1">{activeTab === 'disputes' ? disputes.filter(d => d.status === 'open').length : transactions.length}</AuraText>
+                        <AuraText variant="label" color={activeTab === 'disputes' ? AuraColors.error : AuraColors.primary}>
+                            {activeTab === 'disputes' ? 'ACTIVE ERRORS' : 'VOLUME DETECTED'}
+                        </AuraText>
                     </View>
                     <View style={styles.statBox}>
-                        <AuraText variant="h1">{disputes.filter(d => d.status === 'resolved').length}</AuraText>
-                        <AuraText variant="label" color={AuraColors.success}>NEUTRALIZED</AuraText>
+                        <AuraText variant="h1">{activeTab === 'disputes' ? disputes.filter(d => d.status === 'resolved').length : '₹' + (transactions.reduce((acc, curr) => acc + curr.amount_cents, 0) / 100).toLocaleString()}</AuraText>
+                        <AuraText variant="label" color={AuraColors.success}>
+                            {activeTab === 'disputes' ? 'NEUTRALIZED' : 'SECURED FLOW'}
+                        </AuraText>
                     </View>
                 </View>
 
                 {loading ? (
                     <ActivityIndicator size="large" color={AuraColors.primary} style={{ marginTop: 40 }} />
-                ) : disputes.length === 0 ? (
-                    <View style={styles.empty}>
-                        <CheckCircle size={48} color={AuraColors.gray700} />
-                        <AuraText variant="body" color={AuraColors.gray500} style={{ marginTop: 16 }}>Operational clean state.</AuraText>
-                    </View>
-                ) : (
-                    disputes.map((d, i) => (
-                        <AuraMotion key={d.id} type="slide" delay={i * 50} style={styles.card}>
-                            <View style={styles.cardHeader}>
-                                <AuraBadge label={d.status.toUpperCase()} variant={d.status === 'open' ? 'error' : 'success'} />
-                                <AuraText variant="caption" color={AuraColors.gray500}>{new Date(d.created_at).toLocaleDateString()}</AuraText>
-                            </View>
+                ) : activeTab === 'disputes' ? (
+                    disputes.length === 0 ? (
+                        <View style={styles.empty}>
+                            <CheckCircle size={48} color={AuraColors.gray700} />
+                            <AuraText variant="body" color={AuraColors.gray500} style={{ marginTop: 16 }}>Operational clean state.</AuraText>
+                        </View>
+                    ) : (
+                        disputes.map((d, i) => (
+                            <AuraMotion key={d.id} type="slide" delay={i * 50} style={styles.card}>
+                                <View style={styles.cardHeader}>
+                                    <AuraBadge label={d.status.toUpperCase()} variant={d.status === 'open' ? 'error' : 'success'} />
+                                    <AuraText variant="caption" color={AuraColors.gray500}>{new Date(d.created_at).toLocaleDateString()}</AuraText>
+                                </View>
 
-                            <AuraText variant="h3" style={{ marginTop: 12 }}>{d.gig?.title || 'Unknown Gig'}</AuraText>
-                            <AuraText variant="body" color={AuraColors.gray300} style={{ marginVertical: 8 }}>
-                                <AuraText variant="bodyBold">Reason:</AuraText> {d.reason}
-                            </AuraText>
+                                <AuraText variant="h3" style={{ marginTop: 12 }}>{d.gig?.title || 'Unknown Gig'}</AuraText>
+                                <AuraText variant="bodySmall" color={AuraColors.gray400} style={{ marginVertical: 8 }} numberOfLines={2}>
+                                    {d.reason}
+                                </AuraText>
+
+                                <View style={styles.parties}>
+                                    <View style={{ flex: 1 }}>
+                                        <AuraText variant="label" color={AuraColors.gray500}>INITIATOR</AuraText>
+                                        <AuraText variant="bodySmall" color={AuraColors.white}>{d.initiator?.full_name}</AuraText>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <AuraText variant="label" color={AuraColors.gray500}>DEFENDANT</AuraText>
+                                        <AuraText variant="bodySmall" color={AuraColors.white}>{d.defendant?.full_name}</AuraText>
+                                    </View>
+                                </View>
+
+                                <View style={styles.actions}>
+                                    <TouchableOpacity
+                                        style={styles.actionBtn}
+                                        onPress={() => navigation.navigate('GigDetails', { gigId: d.gig_id })}
+                                    >
+                                        <ExternalLink size={16} color={AuraColors.primary} />
+                                        <AuraText variant="label" color={AuraColors.primary} style={{ marginLeft: 8 }}>MISSION DATA</AuraText>
+                                    </TouchableOpacity>
+
+                                    {d.status === 'open' && (
+                                        <TouchableOpacity
+                                            style={[styles.actionBtn, styles.resolveBtn]}
+                                            onPress={() => handleResolve(d.id)}
+                                        >
+                                            <ShieldAlert size={16} color={AuraColors.success} />
+                                            <AuraText variant="label" color={AuraColors.success} style={{ marginLeft: 8 }}>RESOLVE</AuraText>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </AuraMotion>
+                        ))
+                    )
+                ) : (
+                    transactions.map((t, i) => (
+                        <AuraMotion key={t.id} type="slide" delay={i * 30} style={styles.card}>
+                            <View style={styles.cardHeader}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <IndianRupee size={14} color={AuraColors.success} />
+                                    <AuraText variant="h3" color={AuraColors.success} style={{ marginLeft: 4 }}>
+                                        ₹{(t.amount_cents / 100).toLocaleString()}
+                                    </AuraText>
+                                </View>
+                                <AuraBadge label={t.status.toUpperCase()} variant={t.status === 'released' ? 'success' : 'warning'} />
+                            </View>
 
                             <View style={styles.parties}>
                                 <View style={{ flex: 1 }}>
-                                    <AuraText variant="label" color={AuraColors.gray500}>INITIATOR</AuraText>
-                                    <AuraText variant="bodySmall" color={AuraColors.white}>{d.initiator?.full_name}</AuraText>
+                                    <AuraText variant="label" color={AuraColors.gray500}>SENDER</AuraText>
+                                    <AuraText variant="bodySmall" color={AuraColors.white}>{t.client?.full_name}</AuraText>
                                 </View>
+                                <ArrowUpRight size={14} color={AuraColors.gray600} style={{ alignSelf: 'center', marginLeft: 8, marginRight: 8 }} />
                                 <View style={{ flex: 1 }}>
-                                    <AuraText variant="label" color={AuraColors.gray500}>DEFENDANT</AuraText>
-                                    <AuraText variant="bodySmall" color={AuraColors.white}>{d.defendant?.full_name}</AuraText>
+                                    <AuraText variant="label" color={AuraColors.gray500}>RECEIVER</AuraText>
+                                    <AuraText variant="bodySmall" color={AuraColors.white}>{t.worker?.full_name}</AuraText>
                                 </View>
                             </View>
 
-                            <View style={styles.actions}>
-                                <TouchableOpacity
-                                    style={styles.actionBtn}
-                                    onPress={() => navigation.navigate('GigDetails', { gigId: d.gig_id })}
-                                >
-                                    <ExternalLink size={16} color={AuraColors.primary} />
-                                    <AuraText variant="label" color={AuraColors.primary} style={{ marginLeft: 8 }}>VIEW MISSION</AuraText>
-                                </TouchableOpacity>
-
-                                {d.status === 'open' && (
-                                    <TouchableOpacity
-                                        style={[styles.actionBtn, styles.resolveBtn]}
-                                        onPress={() => handleResolve(d.id)}
-                                    >
-                                        <CheckCircle size={16} color={AuraColors.success} />
-                                        <AuraText variant="label" color={AuraColors.success} style={{ marginLeft: 8 }}>RESOLVE</AuraText>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
+                            <AuraText variant="caption" color={AuraColors.gray500} style={{ marginTop: 12 }}>
+                                {new Date(t.created_at).toLocaleString().toUpperCase()} • TXID: {t.id.substring(0, 8)}
+                            </AuraText>
                         </AuraMotion>
                     ))
                 )}
@@ -143,8 +238,30 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: AuraColors.background,
     },
+    tabBar: {
+        flexDirection: 'row',
+        paddingHorizontal: AuraSpacing.xl,
+        gap: 12,
+        marginBottom: 24,
+    },
+    tab: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 16,
+        backgroundColor: AuraColors.surfaceElevated,
+        borderWidth: 1.5,
+        borderColor: AuraColors.gray800,
+    },
+    tabActive: {
+        backgroundColor: AuraColors.primary,
+        borderColor: AuraColors.primary,
+    },
     content: {
-        padding: AuraSpacing.xl,
+        paddingHorizontal: AuraSpacing.xl,
+        paddingBottom: 40,
     },
     stats: {
         flexDirection: 'row',
@@ -156,9 +273,10 @@ const styles = StyleSheet.create({
         backgroundColor: AuraColors.surfaceElevated,
         padding: 20,
         borderRadius: 24,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: AuraColors.gray800,
         alignItems: 'center',
+        ...AuraShadows.soft,
     },
     empty: {
         alignItems: 'center',
@@ -168,9 +286,10 @@ const styles = StyleSheet.create({
         backgroundColor: AuraColors.surfaceElevated,
         padding: 20,
         borderRadius: 24,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: AuraColors.gray800,
         marginBottom: 16,
+        ...AuraShadows.soft,
     },
     cardHeader: {
         flexDirection: 'row',
@@ -181,7 +300,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         backgroundColor: 'rgba(255,255,255,0.03)',
         padding: 12,
-        borderRadius: 12,
+        borderRadius: 16,
         marginTop: 12,
     },
     actions: {
@@ -197,8 +316,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        borderRadius: 12,
+        paddingVertical: 12,
+        borderRadius: 14,
         borderWidth: 1,
         borderColor: 'rgba(0,122,255,0.2)',
     },

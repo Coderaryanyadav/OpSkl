@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Alert, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { supabase } from '@api/supabase';
 import { AuraText } from '@core/components/AuraText';

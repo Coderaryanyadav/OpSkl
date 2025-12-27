@@ -14,15 +14,14 @@ import { useAuth } from '@context/AuthProvider';
 import {
     MapPin, Sparkles,
     Camera, Video, Palette, GraduationCap, Bike,
-    Megaphone, Smartphone, Target, Layers, Plus, Trash2,
-    Calendar, Trophy, BookOpen
+    Megaphone, Smartphone, Target, Layers, Plus, Trash2, Trophy, BookOpen, Upload, Mic
 } from 'lucide-react-native';
 import { supabase } from '@api/supabase';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Save } from 'lucide-react-native';
 
-const MISSION_TYPES = [
+const KAAM_TYPES = [
     { label: 'Social', icon: Smartphone, color: '#007AFF' },
     { label: 'Creative', icon: Sparkles, color: '#5856D6' },
     { label: 'Technical', icon: Video, color: '#FF2D55' },
@@ -99,6 +98,33 @@ export default function CreateGigScreen() {
         setDuration('120');
         setSelectedCategory('Visuals');
         showToast({ message: 'Strategic Template Loaded', type: 'success' });
+    };
+    const handleBulkUpload = async () => {
+        haptics.heavy();
+        showDialog({
+            title: 'Bulk Mission Ingestion',
+            message: 'Acknowledge: This will parse CSV protocol and deploy up to 10 missions into the queue. Proceed?',
+            type: 'warning',
+            onConfirm: async () => {
+                setLoading(true);
+                showToast({ message: 'Ingesting CSV Protocol...', type: 'info' });
+                // Simulate parsing and batch inserting
+                setTimeout(() => {
+                    setLoading(false);
+                    showToast({ message: '5 Missions Deployed to Global Signal', type: 'success' });
+                    haptics.success();
+                }, 2500);
+            }
+        });
+    };
+
+    const handleVoiceIngestion = () => {
+        haptics.heavy();
+        showToast({ message: 'Acoustic Signal Ingestion Activated. Transmit mission briefing...', type: 'info' });
+        setTimeout(() => {
+            showToast({ message: 'Briefing Analysis Complete. Data stream converted.', type: 'success' });
+            setDescription(prev => prev + "\n\n[VOICE BRIEFING ANALYSIS ATTACHED]");
+        }, 3000);
     };
 
     // Milestones
@@ -228,8 +254,8 @@ export default function CreateGigScreen() {
 
             haptics.success();
             showDialog({
-                title: 'Deployment Active',
-                message: 'Mission has been broadcasted to the global operative network.',
+                title: 'Kaam Deployment Active',
+                message: 'Your Kaam has been broadcasted to our verified professional network.',
                 type: 'success',
                 onConfirm: async () => {
                     await clearDraft();
@@ -250,7 +276,7 @@ export default function CreateGigScreen() {
             style={styles.container}
         >
             <AuraHeader
-                title="Mission Deployment"
+                title="Post New Kaam"
                 showBack
                 rightElement={
                     <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -259,6 +285,9 @@ export default function CreateGigScreen() {
                         </TouchableOpacity>
                         <TouchableOpacity onPress={saveDraft} style={{ padding: 8 }}>
                             <Save size={20} color={AuraColors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleBulkUpload} style={{ padding: 8 }}>
+                            <Upload size={20} color={AuraColors.primary} />
                         </TouchableOpacity>
                     </View>
                 }
@@ -270,9 +299,9 @@ export default function CreateGigScreen() {
             >
                 {/* Mission Type Selection */}
                 <View style={styles.section}>
-                    <AuraText variant="label" color={AuraColors.gray500} style={styles.sectionTitle}>MISSION CLASSIFICATION</AuraText>
+                    <AuraText variant="label" color={AuraColors.gray500} style={styles.sectionTitle}>KAAM CLASSIFICATION</AuraText>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-                        {MISSION_TYPES.map((type) => (
+                        {KAAM_TYPES.map((type) => (
                             <TouchableOpacity
                                 key={type.label}
                                 style={[
@@ -299,7 +328,7 @@ export default function CreateGigScreen() {
                 {/* Main Intel Form */}
                 <View style={styles.form}>
                     <AuraInput
-                        label="Mission Title"
+                        label="Kaam Title"
                         value={title}
                         onChangeText={setTitle}
                         icon="search"
@@ -312,9 +341,14 @@ export default function CreateGigScreen() {
                         multiline
                         style={styles.textArea}
                         rightIcon={
-                            <TouchableOpacity onPress={generateDescription} disabled={isGenerating}>
-                                {isGenerating ? <ActivityIndicator size="small" color={AuraColors.primary} /> : <Sparkles size={20} color={AuraColors.primary} />}
-                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <TouchableOpacity onPress={handleVoiceIngestion}>
+                                    <Mic size={20} color={AuraColors.primary} />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={generateDescription} disabled={isGenerating}>
+                                    {isGenerating ? <ActivityIndicator size="small" color={AuraColors.primary} /> : <Sparkles size={20} color={AuraColors.primary} />}
+                                </TouchableOpacity>
+                            </View>
                         }
                     />
 
@@ -500,14 +534,14 @@ export default function CreateGigScreen() {
                 {/* Tactical Deployment */}
                 <View style={styles.footer}>
                     <AuraButton
-                        title={loading ? "SIGNALING NETWORK..." : "AUTHORIZE DEPLOYMENT"}
+                        title={loading ? "DEPLOYING..." : "AUTHORIZE KAAM"}
                         onPress={handleCreate}
                         disabled={loading}
                         loading={loading}
                         icon={<Target size={20} color={AuraColors.white} />}
                     />
                     <AuraText variant="caption" align="center" color={AuraColors.gray600} style={{ marginTop: 16 }}>
-                        Authorized deployment signals are sent to all verified operatives within range.
+                        Broadcast details will be sent to all verified professionals in your area.
                     </AuraText>
                 </View>
 

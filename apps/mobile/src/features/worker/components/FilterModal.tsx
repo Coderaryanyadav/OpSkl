@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { AuraText } from '@core/components/AuraText';
 import { AuraButton } from '@core/components/AuraButton';
-import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
-import { X, DollarSign, Clock, AlertTriangle, Heart, Bookmark, Trash2 } from 'lucide-react-native';
+import { AuraColors } from '@theme/aura';
+import { X, IndianRupee, AlertTriangle, Heart, Bookmark, Trash2 } from 'lucide-react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Repository } from '@api/repository';
 import { useAuth } from '@context/AuthProvider';
@@ -90,7 +90,7 @@ export default function FilterModal({ visible, onClose, onApply, onSave }: Filte
                         {/* Budget Section */}
                         <View style={styles.section}>
                             <View style={styles.sectionTitle}>
-                                <DollarSign size={16} color={AuraColors.primary} />
+                                <IndianRupee size={16} color={AuraColors.primary} />
                                 <AuraText variant="label" style={{ marginLeft: 8 }}>BOUNTY RANGE</AuraText>
                             </View>
                             <View style={styles.budgetRow}>

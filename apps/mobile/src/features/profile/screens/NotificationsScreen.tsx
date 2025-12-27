@@ -14,7 +14,7 @@ import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { Bell, Briefcase, Star, DollarSign, ShieldAlert } from 'lucide-react-native';
+import { Bell, Briefcase, Star, IndianRupee, ShieldAlert } from 'lucide-react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import dayjs from 'dayjs';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
@@ -80,7 +80,7 @@ export default function NotificationsScreen() {
         const color = isRead ? AuraColors.gray600 : AuraColors.white;
         switch (type) {
             case 'assignment': return <Briefcase color={color} size={20} />;
-            case 'payment': return <DollarSign color={color} size={20} />;
+            case 'payment': return <IndianRupee color={color} size={20} />;
             case 'review': return <Star color={color} size={20} />;
             case 'security': return <ShieldAlert color={AuraColors.error} size={20} />;
             default: return <Bell color={color} size={20} />;

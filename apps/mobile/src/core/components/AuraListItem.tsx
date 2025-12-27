@@ -1,17 +1,11 @@
 import React from 'react';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import Animated, { Layout, SlideInRight, SlideOutRight } from 'react-native-reanimated';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Swipeable } from 'react-native-gesture-handler';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraSpacing } from '../theme/aura';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from './AuraText';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { ChevronRight, Trash2, Archive } from 'lucide-react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 interface AuraListItemProps {
     title: string;
@@ -36,9 +30,9 @@ export const AuraListItem: React.FC<AuraListItemProps> = ({
     showChevron = true,
     delay = 0
 }) => {
+    const haptics = useAuraHaptics();
 
     const renderRightActions = (_progress: any, _dragX: any) => {
-    const haptics = useAuraHaptics();
         return (
             <View style={styles.rightActions}>
                 {onArchive && (

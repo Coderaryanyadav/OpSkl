@@ -3,13 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { AuraColors, AuraShadows } from '@theme/aura';
+import { AuraColors } from '@theme/aura';
 import { PlusSquare, User, Briefcase, MessageSquare, Zap, LayoutDashboard } from 'lucide-react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraLoader } from '@core/components/AuraLoader';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@context/AuthProvider';
-import { useAura } from '@core/context/AuraProvider';
 
 // Screens - Auth
 import LoginScreen from '@features/auth/screens/LoginScreen';
@@ -28,7 +27,6 @@ import TalentPerksScreen from '@features/worker/screens/TalentPerksScreen';
 import CreateGigScreen from '@features/client/screens/CreateGigScreen';
 import ClientManageGigsScreen from '@features/client/screens/ClientManageGigsScreen';
 import GigManagerScreen from '@features/client/screens/GigManagerScreen';
-import ClientProfileScreen from '@features/client/screens/ClientProfileScreen';
 
 // Screens - Chat
 import ChatScreen from '@features/chat/screens/ChatScreen';
@@ -49,7 +47,6 @@ import AdminModerationScreen from '@features/profile/screens/AdminModerationScre
 
 // Screens - Legal
 import PrivacyPolicyScreen from '@features/legal/screens/PrivacyPolicyScreen';
-import { AuraText } from '@core/components/AuraText';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();

@@ -15,6 +15,8 @@ export interface Profile {
     active_role: UserRole;
     verification_status: VerificationStatus;
     trust_score: number;
+    upi_id: string | null;
+    phone: string | null;
     created_at: string;
     updated_at: string;
     avg_rating?: number;

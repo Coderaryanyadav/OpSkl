@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
 import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
-import { ArrowUpRight, ArrowDownLeft, TrendingUp, ShieldCheck, History, CreditCard, Download, ExternalLink } from 'lucide-react-native';
+import { ArrowUpRight, ArrowDownLeft, TrendingUp, ShieldCheck, History, CreditCard, Download } from 'lucide-react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -24,8 +24,16 @@ export default function WalletScreen() {
     const haptics = useAuraHaptics();
     const { showDialog, showToast } = useAura();
     const { user } = useAuth();
-    const { wallet, transactions, loading, sync } = useWalletStore();
+    const { profile } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
+    const [upiId, setUpiId] = useState(profile?.upi_id || 'notlinked@upi');
+
+    const DAILY_LIMIT = 50000;
+    const dailySpend = useMemo(() => {
+        return transactions
+            .filter(tx => tx.type === 'debit' && dayjs(tx.created_at).isSame(dayjs(), 'day'))
+            .reduce((acc, tx) => acc + tx.amount, 0);
+    }, [transactions]);
 
     const handleSync = useCallback(async () => {
         if (user) {
@@ -51,7 +59,17 @@ export default function WalletScreen() {
         if (balance < 100) {
             showDialog({
                 title: 'Threshold Not Met',
-                message: 'Minimum withdrawal cycle requires ₹100.00 liquidity.',
+                message: 'Minimum withdrawal requires ₹100.00.',
+                type: 'error',
+                onConfirm: () => { }
+            });
+            return;
+        }
+
+        if (dailySpend + balance > DAILY_LIMIT) {
+            showDialog({
+                title: 'Limit Breached',
+                message: `Operational limit exceeded. Remaining daily capacity: ₹${(DAILY_LIMIT - dailySpend).toLocaleString()}`,
                 type: 'error',
                 onConfirm: () => { }
             });
@@ -71,11 +89,11 @@ export default function WalletScreen() {
 
         showDialog({
             title: 'Initiate Payout',
-            message: `Withdraw ₹${balance.toLocaleString()} to your primary bank node?`,
+            message: `Withdraw ₹${balance.toLocaleString()} to UPI: ${upiId}?`,
             type: 'warning',
             onConfirm: () => {
                 haptics.success();
-                showToast({ message: "Payout cycle initiated", type: 'success' });
+                showToast({ message: "Instant UPI Payout Initiated", type: 'success' });
             }
         });
     };
@@ -89,18 +107,18 @@ export default function WalletScreen() {
         haptics.selection();
         const amount = 500; // Fixed denom for demo
         const options = {
-            description: 'AURA CORE CREDITS DEPOSIT',
+            description: 'WALLET TOP-UP',
             image: 'https://i.imgur.com/3g7nmJC.png',
             currency: 'INR',
             key: RAZORPAY_KEY,
             amount: amount * 100,
-            name: 'AURA CORE',
+            name: 'AURA BHARAT',
             theme: { color: AuraColors.primary }
         };
 
         RazorpayCheckout.open(options).then(async () => {
             haptics.success();
-            showToast({ message: "Liquidity injected successfully", type: 'success' });
+            showToast({ message: "Balance updated successfully", type: 'success' });
             await handleRefresh();
         }).catch((error: any) => {
             showToast({ message: `Transaction Aborted: ${error.description}`, type: 'error' });
@@ -116,7 +134,16 @@ export default function WalletScreen() {
 
     return (
         <View style={styles.container}>
-            <AuraHeader title="Treasury Console" showBack />
+            <AuraHeader
+                title="Wallet Status"
+                showBack
+                rightElement={
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: AuraColors.success }} />
+                        <AuraText variant="caption" color={AuraColors.success}>UPI LINKED</AuraText>
+                    </View>
+                }
+            />
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
@@ -131,11 +158,11 @@ export default function WalletScreen() {
                         <View style={styles.secureBadge}>
                             <ShieldCheck size={14} color={AuraColors.success} />
                             <AuraText variant="label" color={AuraColors.success} style={{ marginLeft: 6, fontWeight: '800' }}>
-                                ENCRYPTED LEDGER
+                                SECURE ESCROW
                             </AuraText>
                         </View>
 
-                        <AuraText variant="label" color={AuraColors.gray500} style={{ marginTop: 24, letterSpacing: 2 }}>TOTAL LIQUIDITY</AuraText>
+                        <AuraText variant="label" color={AuraColors.gray500} style={{ marginTop: 24, letterSpacing: 2 }}>CURRENT BALANCE</AuraText>
                         <View style={styles.balanceRow}>
                             <AuraText variant="h1" style={styles.currencySymbol}>₹</AuraText>
                             <AuraText variant="h1" style={styles.balanceText}>{balanceFormatted}</AuraText>
@@ -153,27 +180,47 @@ export default function WalletScreen() {
                                 <View style={[styles.actionIcon, { backgroundColor: AuraColors.surfaceElevated, borderWidth: 1, borderColor: AuraColors.gray800 }]}>
                                     <ArrowUpRight color={AuraColors.white} size={24} />
                                 </View>
-                                <AuraText variant="label" style={{ marginTop: 12 }}>PAYOUT</AuraText>
+                                <AuraText variant="label" style={{ marginTop: 12 }}>WITHDRAW</AuraText>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </AuraMotion>
 
-                {/* Insight Strip */}
+                {/* UPI ID Insight */}
                 <View style={styles.insightStrip}>
                     <TrendingUp size={18} color={AuraColors.success} />
-                    <AuraText variant="bodyBold" style={{ marginLeft: 12, flex: 1 }}>Market performance up 12.4%</AuraText>
-                    <ExternalLink size={14} color={AuraColors.gray600} />
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                        <AuraText variant="caption" color={AuraColors.gray500}>LINKED UPI ID</AuraText>
+                        <AuraText variant="bodyBold">{upiId}</AuraText>
+                    </View>
+                    <TouchableOpacity
+                        onPress={() => { haptics.selection(); }}
+                        style={styles.miniToggle}
+                    >
+                        <AuraText variant="caption" color={AuraColors.primary}>CHANGE</AuraText>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Limit Progress */}
+                <View style={[styles.insightStrip, { marginTop: 12, backgroundColor: 'rgba(255,255,255,0.02)' }]}>
+                    <ShieldCheck size={18} color={AuraColors.primary} />
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                        <AuraText variant="caption" color={AuraColors.gray500}>DAILY WITHDRAWAL LIMIT</AuraText>
+                        <View style={styles.limitBarContainer}>
+                            <View style={[styles.limitBar, { width: `${(dailySpend / DAILY_LIMIT) * 100}%` }]} />
+                        </View>
+                    </View>
+                    <AuraText variant="caption" color={AuraColors.white}>₹{dailySpend.toLocaleString()}</AuraText>
                 </View>
 
                 {/* Transaction Ledger */}
                 <View style={styles.ledgerHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <History size={18} color={AuraColors.primary} />
-                        <AuraText variant="h3" style={{ marginLeft: 12 }}>Mission History</AuraText>
+                        <AuraText variant="h3" style={{ marginLeft: 12 }}>Transaction History</AuraText>
                     </View>
                     <TouchableOpacity>
-                        <AuraText variant="label" color={AuraColors.gray500}>REPORTS</AuraText>
+                        <AuraText variant="label" color={AuraColors.gray500}>GST INVOICES</AuraText>
                     </TouchableOpacity>
                 </View>
 
@@ -185,7 +232,7 @@ export default function WalletScreen() {
                     ) : transactions.length === 0 ? (
                         <View style={styles.emptyLedger}>
                             <CreditCard size={48} color={AuraColors.gray800} />
-                            <AuraText variant="body" color={AuraColors.gray500} style={{ marginTop: 16 }}>No operational signals recorded.</AuraText>
+                            <AuraText variant="body" color={AuraColors.gray500} style={{ marginTop: 16 }}>No transactions found.</AuraText>
                         </View>
                     ) : (
                         transactions.map((tx: any, index: number) => (
@@ -202,7 +249,7 @@ export default function WalletScreen() {
                                         <AuraText variant="bodyBold" color={tx.type === 'credit' ? AuraColors.success : AuraColors.white}>
                                             {tx.type === 'credit' ? '+' : '-'}₹{tx.amount.toLocaleString()}
                                         </AuraText>
-                                        <AuraBadge label="SYNCED" variant="default" style={{ height: 16, paddingHorizontal: 4 }} />
+                                        <AuraBadge label="SUCCESS" variant="default" style={{ height: 16, paddingHorizontal: 4 }} />
                                     </View>
                                 </View>
                             </AuraMotion>
@@ -212,8 +259,8 @@ export default function WalletScreen() {
 
                 {/* Payout Method */}
                 <AuraButton
-                    title="EXPORT TAX COMPLIANCE"
-                    onPress={() => showToast({ message: "Exporting operational ledger...", type: 'info' })}
+                    title="DOWNLOAD TAX LEDGER"
+                    onPress={() => showToast({ message: "Generating PDF report...", type: 'info' })}
                     variant="outline"
                     icon={<Download size={18} color={AuraColors.white} />}
                     style={styles.exportBtn}
@@ -293,6 +340,29 @@ const styles = StyleSheet.create({
         marginTop: 24,
         borderWidth: 1,
         borderColor: AuraColors.gray800,
+    },
+    miniToggle: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: AuraColors.gray800,
+    },
+    miniToggleActive: {
+        backgroundColor: AuraColors.primary,
+        borderColor: AuraColors.primary,
+    },
+    limitBarContainer: {
+        height: 4,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 2,
+        marginTop: 4,
+        overflow: 'hidden',
+    },
+    limitBar: {
+        height: '100%',
+        backgroundColor: AuraColors.primary,
     },
     ledgerHeader: {
         flexDirection: 'row',

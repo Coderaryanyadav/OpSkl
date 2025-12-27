@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { supabase } from '@api/supabase';
 import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';

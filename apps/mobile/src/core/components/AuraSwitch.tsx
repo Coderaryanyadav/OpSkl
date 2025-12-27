@@ -1,9 +1,6 @@
 import React from 'react';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolateColor } from 'react-native-reanimated';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraShadows } from '../theme/aura';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
@@ -20,12 +17,12 @@ export const AuraSwitch: React.FC<AuraSwitchProps> = ({
     size = 'medium',
     disabled = false
 }) => {
+    const haptics = useAuraHaptics();
     const offset = useSharedValue(value ? 1 : 0);
     const dimensions = size === 'small' ? { w: 40, h: 24, p: 2 } : { w: 50, h: 30, p: 3 };
     const thumbSize = dimensions.h - (dimensions.p * 2);
 
     const handlePress = () => {
-    const haptics = useAuraHaptics();
         if (disabled) return;
         haptics.selection();
         const newValue = !value;
@@ -48,11 +45,11 @@ export const AuraSwitch: React.FC<AuraSwitchProps> = ({
     }));
 
     return (
-        <TouchableOpacity activeOpacity={0.9} onPress={handlePress} disabled={disabled}>
-            <Animated.View style={[styles.track, { width: dimensions.w, height: dimensions.h, padding: dimensions.p }, trackStyle]}>
-                <Animated.View style={[styles.thumb, { width: thumbSize, height: thumbSize, borderRadius: thumbSize / 2 }, thumbStyle]} />
+        <TouchableOpacity activeOpacity={0.9} onPress={handlePress} disabled={disabled} >
+            <Animated.View style={[styles.track as any, { width: dimensions.w, height: dimensions.h, padding: dimensions.p }, trackStyle as any]}>
+                <Animated.View style={[styles.thumb as any, { width: thumbSize, height: thumbSize, borderRadius: thumbSize / 2 }, thumbStyle as any]} />
             </Animated.View>
-        </TouchableOpacity>
+        </TouchableOpacity >
     );
 };
 

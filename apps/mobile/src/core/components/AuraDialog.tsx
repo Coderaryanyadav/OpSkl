@@ -43,7 +43,7 @@ export const AuraDialog: React.FC<AuraDialogProps> = ({
         } else {
             scale.value = 0.8;
         }
-    }, [visible, type, scale, rotation]);
+    }, [visible, type, scale, rotation, haptics]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value as any }, { rotate: `${rotation.value}deg` as any }] as any

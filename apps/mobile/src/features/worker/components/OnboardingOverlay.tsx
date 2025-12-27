@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { AuraText } from '@core/components/AuraText';
-import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
+import { AuraColors, AuraShadows } from '@theme/aura';
 import { AuraButton } from '@core/components/AuraButton';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { Zap, Check, X, Bell } from 'lucide-react-native';

@@ -11,6 +11,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { sanitizeInput } from '@core/utils/security';
 import { useAuth } from '@context/AuthProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useAura } from '@core/context/AuraProvider';
 
 dayjs.extend(relativeTime);
 
@@ -42,6 +43,7 @@ const MessageBubble = React.memo(({ item, isMe }: { item: any; isMe: boolean }) 
 
 export default function ChatScreen() {
     const haptics = useAuraHaptics();
+    const { showToast } = useAura();
     const route = useRoute<any>();
     const navigation = useNavigation<any>();
     const { user } = useAuth();
@@ -120,7 +122,7 @@ export default function ChatScreen() {
             supabase.removeChannel(subscription);
             supabase.removeChannel(presenceChannel);
         };
-    }, [roomId, user?.id]);
+    }, [roomId, user, haptics]);
 
     const handleType = (text: string) => {
         setInput(text);
@@ -131,6 +133,16 @@ export default function ChatScreen() {
     const sendMessage = async () => {
         const cleanInput = sanitizeInput(input);
         if (!cleanInput || !user) return;
+
+        // Tactical watchdog: Detect external contact/payment phishing (Layer 3)
+        const blocklist = [/(\d{10,})/, /paytm/i, /gpay/i, /phonepe/i, /@gmail\.com/i, /@yahoo\.com/i, /whatsapp/i];
+        const isSuspicious = blocklist.some(regex => regex.test(cleanInput));
+
+        if (isSuspicious) {
+            haptics.error();
+            showToast({ message: "SIGNAL BLOCKED: Security policy prohibits sharing external contact/payment intel within this frequency.", type: 'error' });
+            return;
+        }
 
         const newMessage = {
             room_id: roomId,

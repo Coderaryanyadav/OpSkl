@@ -40,7 +40,14 @@ export const AuraHeader: React.FC<AuraHeaderProps> = ({
         <View style={[styles.content, { height: 56 }, style]}>
             <View style={styles.left}>
                 {showBack && (
-                    <TouchableOpacity onPress={handleBack} style={styles.backBtn} activeOpacity={0.7}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            haptics.selection();
+                            handleBack();
+                        }}
+                        style={styles.backBtn}
+                        activeOpacity={0.7}
+                    >
                         <ChevronLeft color={AuraColors.white} size={28} />
                     </TouchableOpacity>
                 )}

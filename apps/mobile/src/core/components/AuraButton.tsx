@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { AuraColors, AuraTypography, AuraBorderRadius, AuraShadows, AuraGradients } from '../theme/aura';
 import { useAuraHaptics } from '../hooks/useAuraHaptics';
-import * as Haptics from 'expo-haptics'; // Keeping for type if needed, but we'll use hook
+// Keeping for type if needed, but we'll use hook
 
 interface AuraButtonProps {
     title: string;

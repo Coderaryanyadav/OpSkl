@@ -8,13 +8,8 @@ import { AuraColors } from '@theme/aura';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuraProvider } from '@core/context/AuraProvider';
 import { AuthProvider } from '@context/AuthProvider';
-
-import { initSentry } from '@core/services/sentry';
-
-import { Analytics } from '@core/utils/analytics';
 import { useEffect } from 'react';
-
-initSentry();
+import { Analytics } from '@core/utils/analytics';
 
 export default function App() {
     useEffect(() => {

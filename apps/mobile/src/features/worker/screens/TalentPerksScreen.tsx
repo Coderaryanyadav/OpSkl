@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Image, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, Image, TouchableOpacity, RefreshControl } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { supabase } from '@api/supabase';
 import { AuraHeader } from '@core/components/AuraHeader';

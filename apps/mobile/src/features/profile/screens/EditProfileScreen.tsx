@@ -13,7 +13,7 @@ import { AuraLoader } from '@core/components/AuraLoader';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuth } from '@context/AuthProvider';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, User, Briefcase, Globe, DollarSign } from 'lucide-react-native';
+import { Camera, User, Briefcase, Globe, IndianRupee } from 'lucide-react-native';
 import { validateUrl, validateAmount } from '@core/utils/validation';
 import { sanitizeInput } from '@core/utils/security';
 
@@ -182,7 +182,7 @@ export default function EditProfileScreen() {
                         onChangeText={setHourlyRate}
                         keyboardType="numeric"
                         placeholder="800"
-                        leftIcon={<DollarSign size={18} color={AuraColors.white} />}
+                        leftIcon={<IndianRupee size={18} color={AuraColors.white} />}
                     />
                 </AuraMotion>
 

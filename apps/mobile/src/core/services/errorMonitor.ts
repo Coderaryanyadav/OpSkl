@@ -47,7 +47,7 @@ class ErrorMonitor {
         }
     }
 
-    setUser(userId: string) {
+    setUser(_userId: string) {
         if (!this.enabled) return;
     }
 }

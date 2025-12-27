@@ -35,8 +35,8 @@ export const useUserStore = create<UserState>()(
             });
         },
 
-        syncGamification: async (profileId: string) => {
-            console.log(`Syncing gamification for ${profileId}`);
+        syncGamification: async (_profileId: string) => {
+            // Future persistence logic
         }
     }))
 );

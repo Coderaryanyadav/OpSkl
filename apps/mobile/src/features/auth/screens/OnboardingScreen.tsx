@@ -1,39 +1,32 @@
 import React, { useRef, useState } from 'react';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, Dimensions, FlatList, TouchableOpacity, ImageBackground } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useNavigation } from '@react-navigation/native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from '@core/components/AuraText';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraButton } from '@core/components/AuraButton';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraSpacing } from '@theme/aura';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 const { width, height } = Dimensions.get('window');
 
 const SLIDES = [
     {
         id: '1',
-        title: 'Find Flexible Work',
-        subtitle: 'Connect with clients looking for your skills. Work when you want, where you want.',
+        title: 'Find Flexible Kaam',
+        subtitle: 'Connect with customers looking for your skills. Work when you want, where you want.',
         image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1000'
     },
     {
         id: '2',
-        title: 'Instant Payments',
-        subtitle: 'Get paid immediately after completing a gig. No more waiting for weeks.',
+        title: 'Instant UPI Payouts',
+        subtitle: 'Get paid immediately after completing your kaam. Secure escrow release.',
         image: 'https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=1000'
     },
     {
         id: '3',
         title: 'Build Your Career',
-        subtitle: 'Earn badges, level up, and showcase your portfolio to top employers.',
+        subtitle: 'Earn trust badges, level up, and showcase your professional portfolio.',
         image: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=1000'
     }
 ];
