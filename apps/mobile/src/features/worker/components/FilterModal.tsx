@@ -1,23 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { AuraText } from '@core/components/AuraText';
 import { AuraButton } from '@core/components/AuraButton';
 import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
-import { X, DollarSign, Clock, AlertTriangle } from 'lucide-react-native';
+import { X, DollarSign, Clock, AlertTriangle, Heart, Bookmark, Trash2 } from 'lucide-react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { Repository } from '@api/repository';
+import { useAuth } from '@context/AuthProvider';
+import { SavedSearch } from '@features/gig-discovery/types';
 
 interface FilterModalProps {
     visible: boolean;
     onClose: () => void;
     onApply: (filters: { minBudget?: number; maxBudget?: number; urgency?: 'low' | 'medium' | 'high' }) => void;
+    onSave?: (filters: { minBudget?: number; maxBudget?: number; urgency?: 'low' | 'medium' | 'high' }) => void;
 }
 
-export default function FilterModal({ visible, onClose, onApply }: FilterModalProps) {
+export default function FilterModal({ visible, onClose, onApply, onSave }: FilterModalProps) {
     const haptics = useAuraHaptics();
+    const { user } = useAuth();
 
+    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
     const [minBudget, setMinBudget] = useState<number | undefined>(undefined);
     const [maxBudget, setMaxBudget] = useState<number | undefined>(undefined);
     const [urgency, setUrgency] = useState<'low' | 'medium' | 'high' | undefined>(undefined);
+
+    useEffect(() => {
+        if (visible && user) {
+            Repository.getSavedSearches(user.id).then(res => {
+                if (res.data) setSavedSearches(res.data);
+            });
+        }
+    }, [visible, user]);
 
     const handleApply = () => {
         haptics.success();
@@ -44,6 +58,35 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
                     </View>
 
                     <ScrollView>
+                        {/* Saved Searches Section */}
+                        {savedSearches.length > 0 && (
+                            <View style={styles.section}>
+                                <View style={styles.sectionTitle}>
+                                    <Bookmark size={16} color={AuraColors.secondary} />
+                                    <AuraText variant="label" style={{ marginLeft: 8 }}>SIGNAL MEMORY</AuraText>
+                                </View>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.budgetRow}>
+                                    {savedSearches.map((search) => (
+                                        <TouchableOpacity
+                                            key={search.id}
+                                            style={[styles.chip, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}
+                                            onPress={() => {
+                                                haptics.selection();
+                                                setMinBudget(search.filters.minBudget);
+                                                setMaxBudget(search.filters.maxBudget);
+                                                setUrgency(search.filters.urgency);
+                                            }}
+                                        >
+                                            <AuraText variant="caption">{search.title}</AuraText>
+                                            <TouchableOpacity onPress={() => { Repository.deleteSavedSearch(search.id); setSavedSearches(prev => prev.filter(s => s.id !== search.id)); haptics.warning(); }}>
+                                                <Trash2 size={12} color={AuraColors.error} />
+                                            </TouchableOpacity>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+
                         {/* Budget Section */}
                         <View style={styles.section}>
                             <View style={styles.sectionTitle}>
@@ -106,6 +149,11 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
                     </ScrollView>
 
                     <View style={styles.footer}>
+                        {onSave && (minBudget || urgency) && (
+                            <TouchableOpacity onPress={() => onSave({ minBudget, maxBudget, urgency })} style={{ padding: 16 }}>
+                                <Heart size={20} color={AuraColors.error} />
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity onPress={handleReset} style={{ padding: 16 }}>
                             <AuraText variant="label" color={AuraColors.gray500}>RESET</AuraText>
                         </TouchableOpacity>

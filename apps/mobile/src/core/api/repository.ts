@@ -8,7 +8,7 @@ import {
     RepositoryResponse,
     PortfolioItem // Import from @types which re-exports from profile/types
 } from '@types';
-import { Gig, Review, Deliverable, EscrowTransaction, Dispute, GigFilters } from '@features/gig-discovery/types';
+import { Gig, Review, Deliverable, EscrowTransaction, Dispute, GigFilters, SavedSearch } from '@features/gig-discovery/types';
 
 
 
@@ -211,6 +211,25 @@ export class Repository {
     }
 
     /**
-     * 💬 COMMUNICATION OPERATIONS
+     * 💾 SAVED SEARCHES
      */
+    static async saveSearch(userId: string, title: string, filters: GigFilters, queryText?: string): Promise<RepositoryResponse<SavedSearch>> {
+        const res = await supabase.from('saved_searches').insert({
+            user_id: userId,
+            title,
+            filters,
+            query_text: queryText
+        }).select().single();
+        return this.wrap(res);
+    }
+
+    static async getSavedSearches(userId: string): Promise<RepositoryResponse<SavedSearch[]>> {
+        const res = await supabase.from('saved_searches').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+        return this.wrap(res as any);
+    }
+
+    static async deleteSavedSearch(id: string): Promise<RepositoryResponse<void>> {
+        const res = await supabase.from('saved_searches').delete().eq('id', id);
+        return this.wrap(res as any);
+    }
 }

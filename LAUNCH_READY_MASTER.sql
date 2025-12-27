@@ -243,3 +243,19 @@ ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMP WITH TIME ZONE;
 
 -- Create Index for fast message fetch
 CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id);
+
+-- ==========================================
+-- 5. SAVED SEARCHES (Power User Feature)
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    query_text TEXT,
+    filters JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE saved_searches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own searches" ON saved_searches FOR ALL USING (auth.uid() = user_id);

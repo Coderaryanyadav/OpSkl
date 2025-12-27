@@ -42,6 +42,14 @@ export interface GigFilters {
     urgency?: 'low' | 'medium' | 'high';
 }
 
+export interface SavedSearch {
+    id: string;
+    title: string;
+    query_text?: string;
+    filters: GigFilters;
+    created_at: string;
+}
+
 export interface Review {
     id: string;
     gig_id: string;

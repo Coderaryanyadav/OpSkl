@@ -212,6 +212,23 @@ export default function WorkerFeedScreen() {
                 visible={showFilters}
                 onClose={() => setShowFilters(false)}
                 onApply={handleApplyFilters}
+                onSave={async (filters: any) => {
+                    if (!user) return;
+                    haptics.success();
+                    const { error } = await Repository.saveSearch(
+                        user.id,
+                        `Signal ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                        filters,
+                        searchQuery
+                    );
+
+                    if (error) {
+                        showToast({ message: 'Failed to capture signal', type: 'error' });
+                    } else {
+                        showToast({ message: 'Signal frequency locked in databank', type: 'success' });
+                        setShowFilters(false);
+                    }
+                }}
             />
             <FeedLoader />
             <AuraHeader title="Discovery" showBack={false} />
