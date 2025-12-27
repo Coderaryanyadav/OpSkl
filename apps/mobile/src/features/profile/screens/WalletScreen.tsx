@@ -14,6 +14,7 @@ import { AuraMotion } from '@core/components/AuraMotion';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuth } from '@context/AuthProvider';
 import { useWalletStore } from '@store/useWalletStore';
+import { BiometricService } from '@core/services/biometrics';
 
 dayjs.extend(relativeTime);
 
@@ -43,7 +44,7 @@ export default function WalletScreen() {
         setRefreshing(false);
     };
 
-    const handleWithdraw = () => {
+    const handleWithdraw = async () => {
         haptics.warning();
         const balance = wallet?.balance || 0;
 
@@ -55,6 +56,17 @@ export default function WalletScreen() {
                 onConfirm: () => { }
             });
             return;
+        }
+
+        // 🔐 2FA / Biometric Security Check
+        const isSecure = await BiometricService.isEnrolled();
+        if (isSecure) {
+            const { success } = await BiometricService.authenticate('Authorize Fund Transfer');
+            if (!success) {
+                haptics.error();
+                showToast({ message: 'Authentication Failed. Transfer Aborted.', type: 'error' });
+                return;
+            }
         }
 
         showDialog({
