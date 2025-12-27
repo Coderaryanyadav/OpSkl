@@ -15,6 +15,7 @@ import { useAura } from '@core/context/AuraProvider';
 import { Repository } from '@api/repository';
 import { Gig, Deliverable, EscrowTransaction } from '@features/gig-discovery/types';
 import { Upload, CheckCircle, Clock, ShieldCheck, FileText, DollarSign, MessageSquare, AlertTriangle } from 'lucide-react-native';
+import { Analytics } from '@core/utils/analytics';
 
 export default function GigDetailsScreen() {
     const route = useRoute();
@@ -49,6 +50,9 @@ export default function GigDetailsScreen() {
 
             if (gigError) throw gigError;
             setGig(gigData);
+
+            // Track View
+            Analytics.track('GIG_VIEWED', { gig_id: gigId, title: gigData.title, budget: gigData.budget });
 
             // Get Deliverables
             const { data: delData } = await supabase

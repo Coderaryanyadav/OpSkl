@@ -11,9 +11,16 @@ import { AuthProvider } from '@context/AuthProvider';
 
 import { initSentry } from '@core/services/sentry';
 
+import { Analytics } from '@core/utils/analytics';
+import { useEffect } from 'react';
+
 initSentry();
 
 export default function App() {
+    useEffect(() => {
+        Analytics.track('APP_OPENED');
+    }, []);
+
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <SafeAreaProvider>

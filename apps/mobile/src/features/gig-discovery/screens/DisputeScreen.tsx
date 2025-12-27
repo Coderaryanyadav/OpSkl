@@ -10,6 +10,7 @@ import { useAuth } from '@context/AuthProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Repository } from '@api/repository';
 import { AlertTriangle, Info } from 'lucide-react-native';
+import { Analytics } from '@core/utils/analytics';
 
 const DISPUTE_REASONS = [
     'Non-delivery of work',
@@ -57,6 +58,8 @@ export default function DisputeScreen() {
                     });
 
                     if (error) throw error;
+
+                    Analytics.track('DISPUTE_INITIATED', { gig_id: gigId, reason });
 
                     haptics.success();
                     showToast({ message: 'Conflict Protocol Active. Arbitration pending.', type: 'success' });

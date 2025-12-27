@@ -4,7 +4,7 @@ type EventName =
     | 'APP_OPENED'
     | 'GIG_VIEWED'
     | 'GIG_APPLIED'
-    | 'DISPUTE_ initiated'
+    | 'DISPUTE_INITIATED'
     | 'PROFILE_VIEWED'
     | 'SEARCH_PERFORMED'
     | 'FILTER_USED';
