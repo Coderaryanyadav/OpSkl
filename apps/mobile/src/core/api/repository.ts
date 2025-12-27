@@ -8,7 +8,7 @@ import {
     RepositoryResponse,
     PortfolioItem // Import from @types which re-exports from profile/types
 } from '@types';
-import { Gig, Review, Deliverable, EscrowTransaction, Dispute, GigFilters, SavedSearch } from '@features/gig-discovery/types';
+import { Gig, Review, Deliverable, EscrowTransaction, Dispute, GigFilters, SavedSearch, Milestone } from '@features/gig-discovery/types';
 
 
 
@@ -228,8 +228,27 @@ export class Repository {
         return this.wrap(res as any);
     }
 
+
     static async deleteSavedSearch(id: string): Promise<RepositoryResponse<void>> {
         const res = await supabase.from('saved_searches').delete().eq('id', id);
+        return this.wrap(res as any);
+    }
+
+    /**
+     * 🚩 MILESTONES
+     */
+    static async createMilestone(milestone: Partial<Milestone>): Promise<RepositoryResponse<Milestone>> {
+        const res = await supabase.from('milestones').insert(milestone).select().single();
+        return this.wrap(res);
+    }
+    
+    static async getMilestones(gigId: string): Promise<RepositoryResponse<Milestone[]>> {
+        const res = await supabase.from('milestones').select('*').eq('gig_id', gigId).order('created_at', { ascending: true });
+        return this.wrap(res as any);
+    }
+
+    static async updateMilestoneStatus(id: string, status: Milestone['status']): Promise<RepositoryResponse<void>> {
+        const res = await supabase.from('milestones').update({ status }).eq('id', id);
         return this.wrap(res as any);
     }
 }

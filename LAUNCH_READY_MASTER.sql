@@ -259,3 +259,24 @@ CREATE TABLE IF NOT EXISTS saved_searches (
 
 ALTER TABLE saved_searches ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage own searches" ON saved_searches FOR ALL USING (auth.uid() = user_id);
+
+-- ==========================================
+-- 6. PROJECT MILESTONES (Enterprise Feature)
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS milestones (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    gig_id UUID NOT NULL REFERENCES gigs(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    amount_cents INTEGER NOT NULL,
+    due_date TIMESTAMP WITH TIME ZONE,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'completed', 'paid', 'disputed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE milestones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public view milestones" ON milestones FOR SELECT USING (true);
+CREATE POLICY "Client manage milestones" ON milestones FOR ALL USING (
+    auth.uid() IN (SELECT client_id FROM gigs WHERE id = gig_id)
+);

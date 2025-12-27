@@ -50,6 +50,17 @@ export interface SavedSearch {
     created_at: string;
 }
 
+export interface Milestone {
+    id: string;
+    gig_id: string;
+    title: string;
+    description?: string;
+    amount_cents: number;
+    due_date?: string;
+    status: 'pending' | 'active' | 'completed' | 'paid' | 'disputed';
+    created_at: string;
+}
+
 export interface Review {
     id: string;
     gig_id: string;

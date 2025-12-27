@@ -14,7 +14,7 @@ import { useAuth } from '@context/AuthProvider';
 import {
     MapPin, Sparkles,
     Camera, Video, Palette, GraduationCap, Bike,
-    Megaphone, Smartphone, Target
+    Megaphone, Smartphone, Target, Layers, Plus, Trash2
 } from 'lucide-react-native';
 import { supabase } from '@api/supabase';
 import { useNavigation } from '@react-navigation/native';
@@ -47,6 +47,34 @@ export default function CreateGigScreen() {
     const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [isPredicting, setIsPredicting] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Milestones
+    const [useMilestones, setUseMilestones] = useState(false);
+    const [milestones, setMilestones] = useState<{ title: string, amount: string }[]>([{ title: 'Project Start', amount: '' }]);
+
+    const addMilestone = () => {
+        setMilestones([...milestones, { title: '', amount: '' }]);
+        haptics.light();
+    };
+
+    const removeMilestone = (index: number) => {
+        const newM = [...milestones];
+        newM.splice(index, 1);
+        setMilestones(newM);
+        haptics.warning();
+    };
+
+    const updateMilestone = (index: number, field: 'title' | 'amount', value: string) => {
+        const newM = [...milestones];
+        newM[index] = { ...newM[index], [field]: value };
+        setMilestones(newM);
+
+        // Auto-calc total
+        if (field === 'amount') {
+            const total = newM.reduce((sum, m) => sum + (parseInt(m.amount) || 0), 0);
+            setPay(total.toString());
+        }
+    };
 
     const predictPrice = useCallback(async () => {
         if (!duration || !selectedCategory) return;
@@ -91,7 +119,7 @@ export default function CreateGigScreen() {
         try {
             if (!user) throw new Error("Authentication node offline.");
 
-            const { error } = await supabase.from('gigs').insert({
+            const { data, error } = await supabase.from('gigs').insert({
                 client_id: user.id,
                 title: title.trim(),
                 description: description.trim(),
@@ -101,7 +129,24 @@ export default function CreateGigScreen() {
                 status: 'open',
                 location_point: `POINT(${location.lng} ${location.lat})`,
                 category: selectedCategory
-            });
+            }).select().single();
+
+            if (error) throw error;
+            const newGigId = data.id;
+
+            // Handle Milestones
+            if (useMilestones) {
+                for (const m of milestones) {
+                    if (m.title && m.amount) {
+                        await supabase.from('milestones').insert({
+                            gig_id: newGigId,
+                            title: m.title,
+                            amount_cents: parseInt(m.amount) * 100,
+                            status: 'pending'
+                        });
+                    }
+                }
+            }
 
             if (error) throw error;
 
@@ -192,6 +237,48 @@ export default function CreateGigScreen() {
                     </View>
 
                     {/* Logistics Row */}
+                    <View style={styles.section}>
+                        <TouchableOpacity
+                            style={[styles.priorityBtn, useMilestones && styles.priorityBtnActive, { marginBottom: 16, flexDirection: 'row', gap: 12 }]}
+                            onPress={() => { setUseMilestones(!useMilestones); haptics.selection(); }}
+                        >
+                            <Layers size={20} color={useMilestones ? AuraColors.primary : AuraColors.gray500} />
+                            <AuraText variant="bodyBold" color={useMilestones ? AuraColors.primary : AuraColors.gray500}>
+                                {useMilestones ? "MILESTONE PAYMENTS ACTIVE" : "ENABLE MILESTONE PAYMENTS"}
+                            </AuraText>
+                        </TouchableOpacity>
+
+                        {useMilestones ? (
+                            <View style={{ gap: 12 }}>
+                                {milestones.map((m, i) => (
+                                    <View key={i} style={{ flexDirection: 'row', gap: 8 }}>
+                                        <View style={{ flex: 2 }}>
+                                            <AuraInput
+                                                placeholder={`Milestone ${i + 1}`}
+                                                value={m.title}
+                                                onChangeText={(t) => updateMilestone(i, 'title', t)}
+                                            />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <AuraInput
+                                                placeholder="₹"
+                                                keyboardType="numeric"
+                                                value={m.amount}
+                                                onChangeText={(t) => updateMilestone(i, 'amount', t)}
+                                            />
+                                        </View>
+                                        {i > 0 && (
+                                            <TouchableOpacity onPress={() => removeMilestone(i)} style={{ justifyContent: 'center', padding: 8 }}>
+                                                <Trash2 size={20} color={AuraColors.error} />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                ))}
+                                <AuraButton title="Add Milestone" variant="outline" onPress={addMilestone} icon={<Plus size={16} color={AuraColors.primary} />} />
+                            </View>
+                        ) : null}
+                    </View>
+
                     <View style={styles.logisticsRow}>
                         <View style={{ flex: 1 }}>
                             <AuraInput
