@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Production
+build/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+android_logs.txt
+
+# OS
+.DS_Store
+*.pem
+
+# Project specific
+apps/mobile/OpSkl-Fixed-Final.apk
+apps/mobile/eslint-report.json
+AUDIT_REPORT_V2.md
+MASTER_PRODUCTION.sql
+fix-lint.sh
+check_env.sh
+test-runner.js

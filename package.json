@@ -1,0 +1,21 @@
+{
+  "name": "opskl-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OpSkl (Opportunity Skill) Monorepo - Gig Economy Platform",
+  "scripts": {
+    "test": "npm test --prefix apps/mobile",
+    "mobile": "npm start --prefix apps/mobile",
+    "admin": "npm run dev --prefix apps/admin"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "dependencies": {
+    "@supabase/supabase-js": "^2.87.3",
+    "expo-linear-gradient": "^15.0.8"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0"
+  }
+}

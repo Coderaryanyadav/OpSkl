@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "OpSkl",
+    "slug": "opskl-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.opskl.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "OpSkl needs camera access to verify your identity and jobs.",
+        "NSPhotoLibraryUsageDescription": "OpSkl needs photo access to upload identity documents.",
+        "NSLocationWhenInUseUsageDescription": "OpSkl needs your location to show available gigs near you."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.opskl.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "OpSkl needs your location to show gigs."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "OpSkl needs access to your photos for verification."
+        }
+      ],
+      "expo-asset",
+      "expo-secure-store"
+    ],
+    "newArchEnabled": false,
+    "extra": {
+      "eas": {
+        "projectId": "3a9a7dfa-8138-44e1-a712-cde8108f77ef"
+      }
+    },
+    "owner": "coderaryanyadav"
+  }
+}

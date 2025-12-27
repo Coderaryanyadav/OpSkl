@@ -1,0 +1,81 @@
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+import { supabase } from '../core/api/supabase';
+import * as Device from 'expo-device';
+
+
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+    }),
+});
+
+export const NotificationService = {
+    /**
+     * Register for Push Notifications
+     */
+    async registerForPushNotificationsAsync() {
+        let token;
+
+        if (Platform.OS === 'android') {
+            await Notifications.setNotificationChannelAsync('default', {
+                name: 'default',
+                importance: Notifications.AndroidImportance.MAX,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#FF231F7C',
+            });
+        }
+
+        if (Device.isDevice) {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                return;
+            }
+
+            // Get Expo Push Token
+            token = (await Notifications.getExpoPushTokenAsync({
+                projectId: process.env.EXPO_PUBLIC_PROJECT_ID
+            })).data;
+
+            // Save to Supabase Profile
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user && token) {
+                await supabase
+                    .from('profiles')
+                    .update({ push_token: token })
+                    .eq('id', user.id);
+            }
+        } else {
+        }
+
+        return token;
+    },
+
+    /**
+     * Schedule Local Notification
+     */
+    async scheduleNotification(title: string, body: string, seconds: number = 1) {
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title,
+                body,
+                sound: true,
+            },
+            trigger: { 
+                seconds,
+                type: 'timeInterval'
+            } as any,
+        });
+    }
+};
