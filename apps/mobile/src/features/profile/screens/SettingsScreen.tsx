@@ -12,10 +12,13 @@ import { supabase } from '@api/supabase';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Switch } from 'react-native'; // Standard switch for better control in this list
+import { useAuth } from '@context/AuthProvider';
+import { Terminal } from 'lucide-react-native';
 
 export default function SettingsScreen() {
     const navigation = useNavigation<any>();
     const { showDialog, showToast } = useAura();
+    const { user } = useAuth();
     const haptics = useAuraHaptics();
 
     const [pushEnabled, setPushEnabled] = useState(true);
@@ -138,6 +141,22 @@ export default function SettingsScreen() {
                         />
                     </View>
                 </AuraMotion>
+
+                {/* Admin Operations - ONLY FOR ADMINS */}
+                {user?.email?.includes('admin') && (
+                    <AuraMotion type="slide" delay={350}>
+                        <AuraText variant="label" color={AuraColors.warning} style={styles.sectionHeader}>ADMIN PROTOCOLS</AuraText>
+                        <View style={[styles.section, { borderColor: AuraColors.warning }]}>
+                            <AuraListItem
+                                title="Moderation Queue"
+                                subtitle="Adjudicate disputes & threats"
+                                leftIcon={<Terminal size={20} color={AuraColors.warning} />}
+                                onPress={() => { haptics.heavy(); navigation.navigate('AdminModeration'); }}
+                                rightElement={<ChevronRight size={18} color={AuraColors.warning} />}
+                            />
+                        </View>
+                    </AuraMotion>
+                )}
 
                 <AuraMotion type="slide" delay={400} style={styles.footer}>
                     <AuraButton

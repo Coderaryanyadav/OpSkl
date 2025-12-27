@@ -12,9 +12,11 @@ import { AuraMotion } from '@core/components/AuraMotion';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAuth } from '@context/AuthProvider';
 import { useAura } from '@core/context/AuraProvider';
+import { AuraBadge } from '@core/components/AuraBadge';
 import { Repository } from '@api/repository';
-import { Gig, Deliverable, EscrowTransaction } from '@features/gig-discovery/types';
-import { Upload, CheckCircle, Clock, ShieldCheck, FileText, DollarSign, MessageSquare, AlertTriangle } from 'lucide-react-native';
+import { Gig, Deliverable, EscrowTransaction, Milestone } from '@features/gig-discovery/types';
+import { Upload, CheckCircle, Clock, ShieldCheck, FileText, DollarSign, MessageSquare, AlertTriangle, Layers, Flag } from 'lucide-react-native';
+import { ApplicationModal } from '../components/ApplicationModal';
 import { Analytics } from '@core/utils/analytics';
 
 export default function GigDetailsScreen() {
@@ -30,11 +32,13 @@ export default function GigDetailsScreen() {
     const [escrow, setEscrow] = useState<EscrowTransaction | null>(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [milestones, setMilestones] = useState<Milestone[]>([]);
 
     // Header for deliverable upload
     const [fileLink, setFileLink] = useState('');
     const [fileDesc, setFileDesc] = useState('');
     const [showUploadForm, setShowUploadForm] = useState(false);
+    const [isApplyModalVisible, setIsApplyModalVisible] = useState(false);
 
     const isWorker = user?.id === gig?.assigned_worker_id;
     const isClient = user?.id === gig?.client_id;
@@ -71,6 +75,10 @@ export default function GigDetailsScreen() {
                 .single();
 
             if (escrowData) setEscrow(escrowData);
+
+            // Get Milestones
+            const { data: miloData } = await Repository.getMilestones(gigId);
+            if (miloData) setMilestones(miloData);
 
         } catch (error: any) {
             console.error('Error fetching gig details:', error);
@@ -160,6 +168,58 @@ export default function GigDetailsScreen() {
         });
     };
 
+    const handleReleaseMilestone = async (m: Milestone) => {
+        haptics.warning();
+        showDialog({
+            title: 'Release Milestone Funds?',
+            message: `Verify '${m.title}' is completed. This will transfer ₹${(m.amount_cents / 100).toLocaleString()} to the operative.`,
+            type: 'warning',
+            onConfirm: async () => {
+                setUploading(true);
+                try {
+                    const { error } = await supabase.rpc('release_milestone', { p_milestone_id: m.id });
+                    if (error) throw error;
+                    haptics.success();
+                    showToast({ message: 'Milestone Funds Released', type: 'success' });
+                    fetchDetails();
+                } catch (e: any) {
+                    showToast({ message: e.message || 'Transaction Failed', type: 'error' });
+                } finally {
+                    setUploading(false);
+                }
+            }
+        });
+    };
+
+    const handleMarkMilestoneComplete = async (mId: string) => {
+        haptics.success();
+        try {
+            const { error } = await Repository.updateMilestoneStatus(mId, 'completed');
+            if (error) throw error;
+            showToast({ message: 'Milestone marked for review', type: 'success' });
+            fetchDetails();
+        } catch (e: any) {
+            showToast({ message: 'Update failed', type: 'error' });
+        }
+    };
+
+    const handleApplyGig = async (message: string) => {
+        if (!user) return;
+        setUploading(true);
+        haptics.heavy();
+        try {
+            const { error } = await Repository.applyToGig(gigId, user.id, message);
+            if (error) throw error;
+            showToast({ message: 'Application Transmitted', type: 'success' });
+            setIsApplyModalVisible(false);
+            fetchDetails();
+        } catch (e: any) {
+            showToast({ message: e.message || 'Transmission Failed', type: 'error' });
+        } finally {
+            setUploading(false);
+        }
+    };
+
     if (loading) {
         return (
             <View style={styles.center}>
@@ -228,6 +288,62 @@ export default function GigDetailsScreen() {
                         </View>
                     </View>
                 </View>
+
+                {/* Milestone Progress Section */}
+                {milestones.length > 0 && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <AuraText variant="h3">System Milestones</AuraText>
+                            <AuraBadge
+                                label={`${milestones.filter(m => m.status === 'paid').length}/${milestones.length} COMPLETE`}
+                                variant="success"
+                            />
+                        </View>
+
+                        <View style={styles.milestoneList}>
+                            {milestones.map((m, i) => (
+                                <View key={m.id} style={styles.milestoneCard}>
+                                    <View style={styles.milestoneHeader}>
+                                        <View style={[styles.mIndex, m.status === 'paid' && { backgroundColor: AuraColors.success }]}>
+                                            <AuraText variant="label" color={AuraColors.white}>{i + 1}</AuraText>
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <AuraText variant="bodyBold">{m.title}</AuraText>
+                                            <AuraText variant="caption" color={AuraColors.gray500}>₹{(m.amount_cents / 100).toLocaleString()}</AuraText>
+                                        </View>
+
+                                        {m.status === 'paid' ? (
+                                            <ShieldCheck size={18} color={AuraColors.success} />
+                                        ) : m.status === 'completed' ? (
+                                            <Clock size={18} color={AuraColors.warning} />
+                                        ) : (
+                                            <Flag size={18} color={AuraColors.gray700} />
+                                        )}
+                                    </View>
+
+                                    {/* Actions */}
+                                    {isClient && m.status === 'completed' && (
+                                        <TouchableOpacity
+                                            style={styles.mActionBtn}
+                                            onPress={() => handleReleaseMilestone(m)}
+                                        >
+                                            <AuraText variant="label" color={AuraColors.primary}>VERIFY & RELEASE</AuraText>
+                                        </TouchableOpacity>
+                                    )}
+
+                                    {isWorker && m.status === 'pending' && (
+                                        <TouchableOpacity
+                                            style={styles.mActionBtn}
+                                            onPress={() => handleMarkMilestoneComplete(m.id)}
+                                        >
+                                            <AuraText variant="label" color={AuraColors.primary}>MARK AS COMPLETE</AuraText>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
 
                 {/* Deliverables Section */}
                 <View style={styles.section}>
@@ -333,7 +449,25 @@ export default function GigDetailsScreen() {
                     <MessageSquare size={24} color={AuraColors.white} />
                 </TouchableOpacity>
 
-                <View style={{ height: 80 }} />
+                {/* Apply Button for Workers */}
+                {!isWorker && !isClient && gig.status === 'open' && (
+                    <AuraMotion type="slide" style={styles.bottomApply}>
+                        <AuraButton
+                            title="APPLY TO MISSION"
+                            variant="primary"
+                            onPress={() => setIsApplyModalVisible(true)}
+                        />
+                    </AuraMotion>
+                )}
+
+                <ApplicationModal
+                    visible={isApplyModalVisible}
+                    onClose={() => setIsApplyModalVisible(false)}
+                    onSubmit={handleApplyGig}
+                    loading={uploading}
+                />
+
+                <View style={{ height: 120 }} />
             </ScrollView>
         </View>
     );
@@ -470,5 +604,45 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         ...AuraShadows.floating,
+    },
+    milestoneList: {
+        gap: 12,
+        marginTop: 12,
+    },
+    milestoneCard: {
+        backgroundColor: AuraColors.surfaceElevated,
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: AuraColors.gray800,
+    },
+    milestoneHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 8,
+    },
+    mIndex: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: AuraColors.gray700,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mActionBtn: {
+        marginTop: 8,
+        paddingTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: AuraColors.gray800,
+        alignItems: 'center',
+    },
+    bottomApply: {
+        marginTop: 40,
+        backgroundColor: AuraColors.surfaceElevated,
+        padding: 24,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: AuraColors.gray800,
     }
 });

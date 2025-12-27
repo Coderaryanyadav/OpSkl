@@ -45,6 +45,7 @@ import VerificationScreen from '@features/profile/screens/VerificationScreen';
 import TrustedContactsScreen from '@features/profile/screens/TrustedContactsScreen';
 import NotificationsScreen from '@features/profile/screens/NotificationsScreen';
 import NotificationPreferencesScreen from '@features/profile/screens/NotificationPreferencesScreen';
+import AdminModerationScreen from '@features/profile/screens/AdminModerationScreen';
 
 // Screens - Legal
 import PrivacyPolicyScreen from '@features/legal/screens/PrivacyPolicyScreen';
@@ -219,6 +220,7 @@ export default function RootNavigator() {
                         <Stack.Screen name="TrustedContacts" component={TrustedContactsScreen} />
                         <Stack.Screen name="Notifications" component={NotificationsScreen} />
                         <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
+                        <Stack.Screen name="AdminModeration" component={AdminModerationScreen} />
                         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
 
                         <Stack.Screen name="PortfolioUpload" component={PortfolioUploadScreen} />

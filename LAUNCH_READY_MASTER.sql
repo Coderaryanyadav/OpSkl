@@ -212,6 +212,59 @@ BEGIN
 END;
 $$;
 
+-- Function to Release specific Milestone
+CREATE OR REPLACE FUNCTION release_milestone(p_milestone_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_amount int;
+  v_worker_id uuid;
+  v_client_id uuid;
+  v_gig_id uuid;
+  v_status text;
+BEGIN
+  -- 1. Get Milestone Details
+  SELECT amount_cents, gig_id, status INTO v_amount, v_gig_id, v_status
+  FROM milestones
+  WHERE id = p_milestone_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Milestone not found';
+  END IF;
+
+  IF v_status = 'paid' THEN
+    RAISE EXCEPTION 'Milestone already paid';
+  END IF;
+
+  -- 2. Get Gig/Worker details (Accepted worker)
+  SELECT client_id, (SELECT worker_id FROM applications WHERE gig_id = v_gig_id AND status = 'accepted' LIMIT 1) 
+  INTO v_client_id, v_worker_id
+  FROM gigs
+  WHERE id = v_gig_id;
+
+  -- 3. Verify Caller is Client
+  IF auth.uid() != v_client_id THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  -- 4. Mark Milestone as Paid
+  UPDATE milestones SET status = 'paid' WHERE id = p_milestone_id;
+
+  -- 5. Credit Worker Wallet
+  INSERT INTO wallets (user_id, balance_cents)
+  VALUES (v_worker_id, 0)
+  ON CONFLICT (user_id) DO NOTHING;
+
+  UPDATE wallets
+  SET balance_cents = balance_cents + v_amount,
+      updated_at = now()
+  WHERE user_id = v_worker_id;
+
+END;
+$$;
+
 -- Profile Aggregations
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avg_rating numeric(3,2) DEFAULT 0.0;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS review_count integer DEFAULT 0;
