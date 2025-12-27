@@ -21,7 +21,7 @@ export const AuraText: React.FC<AuraTextProps> = ({
 }) => {
     // Default colors based on variant
     const defaultColor = (variant as string) === 'caption' || (variant as string) === 'label'
-        ? AuraColors.gray600
+        ? AuraColors.gray400
         : AuraColors.white;
 
     return (

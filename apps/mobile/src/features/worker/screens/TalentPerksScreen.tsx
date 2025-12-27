@@ -1,16 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, FlatList, Image, TouchableOpacity, RefreshControl, Alert } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraLoader } from '../../../core/components/AuraLoader';
-import { AuraBadge } from '../../../core/components/AuraBadge';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { supabase } from '@api/supabase';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraLoader } from '@core/components/AuraLoader';
+import { AuraBadge } from '@core/components/AuraBadge';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
 import { Tag, ExternalLink, Gift, ShieldCheck } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { useAura } from '@core/context/AuraProvider';
 
 export default function TalentPerksScreen() {
+    const haptics = useAuraHaptics();
+    const { showDialog, showToast } = useAura();
     const [deals, setDeals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -38,13 +41,20 @@ export default function TalentPerksScreen() {
     }, [fetchDeals]);
 
     const handlePress = (item: any) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        Alert.alert("Privilege Access", `Copy code: ${item.code || 'NO CODE REQUIRED'}`);
+        haptics.light();
+        showDialog({
+            title: 'Privilege Access',
+            message: `Exclusive protocol code for ${item.brand || 'Partner'}: ${item.code || 'NO CODE REQUIRED'}. Use this during checkout to authorize benefits.`,
+            primaryLabel: 'COPY CODE',
+            onConfirm: () => {
+                showToast({ message: "Code synchronized to clipboard", type: 'success' });
+            }
+        });
     };
 
     const onRefresh = () => {
         setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.light();
         fetchDeals();
     };
 

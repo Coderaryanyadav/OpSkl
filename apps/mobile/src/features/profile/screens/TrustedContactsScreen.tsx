@@ -1,28 +1,39 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Alert, TouchableOpacity } from 'react-native';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { supabase } from '../../../core/api/supabase';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraInput } from '../../../core/components/AuraInput';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
+import { View, StyleSheet, FlatList, Alert, TouchableOpacity, ViewStyle } from 'react-native';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { supabase } from '@api/supabase';
+import { AuraText } from '@core/components/AuraText';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraInput } from '@core/components/AuraInput';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
 import { Shield, Trash2, Plus, User, Phone, Signal, X } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
+
+interface Contact {
+    id: string;
+    user_id: string;
+    name: string;
+    phone: string;
+    created_at: string;
+}
 
 export default function TrustedContactsScreen() {
-    const [contacts, setContacts] = useState<any[]>([]);
+    const { user } = useAuth();
+    const { showDialog, showToast } = useAura();
+    const haptics = useAuraHaptics();
+    const [contacts, setContacts] = useState<Contact[]>([]);
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [adding, setAdding] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const fetchContacts = useCallback(async () => {
+        if (!user) return;
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
             const { data, error } = await supabase
                 .from('trusted_contacts')
                 .select('*')
@@ -36,7 +47,7 @@ export default function TrustedContactsScreen() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         fetchContacts();
@@ -44,13 +55,12 @@ export default function TrustedContactsScreen() {
 
     const addContact = async () => {
         if (!name.trim() || !phone.trim()) {
-            Alert.alert("Registry Error", "Identity designation and uplink signal required.");
+            showToast({ message: "Registry Error: Identity and uplink required.", type: 'error' });
             return;
         }
 
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        haptics.heavy();
         try {
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
             const { data, error } = await supabase.from('trusted_contacts').insert({
@@ -65,20 +75,27 @@ export default function TrustedContactsScreen() {
             setName('');
             setPhone('');
             setAdding(false);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
+            showToast({ message: "Node link established", type: 'success' });
         } catch (e: any) {
-            Alert.alert("Link Failure", e.message);
+            showDialog({
+                title: 'Link Failure',
+                message: e.message || "Failed to establish secure fail-safe link.",
+                type: 'error',
+                onConfirm: () => { }
+            });
         }
     };
 
     const removeContact = async (id: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptics.medium();
         try {
             const { error } = await supabase.from('trusted_contacts').delete().eq('id', id);
             if (error) throw error;
             setContacts(prev => prev.filter(c => c.id !== id));
+            showToast({ message: "Uplink Terminated", type: 'info' });
         } catch (e: any) {
-            Alert.alert("Protocol Breach", "Failed to terminate secure link.");
+            showToast({ message: "Protocol Breach: Termination failed.", type: 'error' });
         }
     };
 
@@ -151,7 +168,7 @@ export default function TrustedContactsScreen() {
                     <Animated.View
                         entering={SlideInDown}
                         exiting={SlideOutDown}
-                        style={styles.formSheet}
+                        style={styles.formSheet as any}
                     >
                         <View style={styles.sheetHeader}>
                             <AuraText variant="h2">Register Node</AuraText>
@@ -189,7 +206,7 @@ export default function TrustedContactsScreen() {
 
             {!adding && (
                 <AuraMotion type="zoom" style={styles.fabContainer}>
-                    <TouchableOpacity style={styles.fab} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setAdding(true); }}>
+                    <TouchableOpacity style={styles.fab} onPress={() => { haptics.medium(); setAdding(true); }}>
                         <Plus color={AuraColors.black} size={32} />
                     </TouchableOpacity>
                 </AuraMotion>

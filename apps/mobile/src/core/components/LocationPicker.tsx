@@ -1,17 +1,24 @@
 import React from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraBorderRadius } from '../theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from './AuraText';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { MapPin, Navigation, Shield, Target } from 'lucide-react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import * as Location from 'expo-location';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAura } from '../context/AuraProvider';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 type LocationPickerProps = {
     onLocationSelect: (location: { lat: number; lng: number }) => void;
 };
 
 export default function LocationPicker({ onLocationSelect }: LocationPickerProps) {
+    const haptics = useAuraHaptics();
     const { showToast } = useAura();
     const [selectedLocation, setSelectedLocation] = React.useState<{ lat: number; lng: number } | null>(null);
     const [address, setAddress] = React.useState<string>('');
@@ -19,7 +26,7 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
 
     async function getCurrentLocation() {
         setLoading(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptics.medium();
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
 

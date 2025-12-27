@@ -1,22 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraInput } from '../../../core/components/AuraInput';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
-import { AuraLoader } from '../../../core/components/AuraLoader';
+import { supabase } from '@api/supabase';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraInput } from '@core/components/AuraInput';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
+import { AuraLoader } from '@core/components/AuraLoader';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, User, Briefcase, Globe, DollarSign } from 'lucide-react-native';
-import { validateUrl, validateAmount } from '../../../core/utils/validation';
-import { sanitizeInput } from '../../../core/utils/security';
-import * as Haptics from 'expo-haptics';
+import { validateUrl, validateAmount } from '@core/utils/validation';
+import { sanitizeInput } from '@core/utils/security';
 
 export default function EditProfileScreen() {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
+    const { showDialog, showToast } = useAura();
+    const { user, profile } = useAuth();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
 
@@ -28,28 +33,24 @@ export default function EditProfileScreen() {
     const [website, setWebsite] = useState('');
     const [avatar, setAvatar] = useState<string | null>(null);
 
-    const fetchProfile = useCallback(async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (data) {
-            setFullName(data.full_name || '');
-            setTitle(data.headline || '');
-            setBio(data.bio || '');
-            setWebsite(data.website || '');
-            setHourlyRate(data.hourly_rate?.toString() || '');
-            setAvatar(data.avatar_url);
+    const initData = useCallback(() => {
+        if (profile) {
+            setFullName(profile.full_name || '');
+            setTitle(profile.headline || '');
+            setBio(profile.bio || '');
+            setWebsite(profile.website || '');
+            setHourlyRate(profile.hourly_rate?.toString() || '');
+            setAvatar(profile.avatar_url);
         }
         setFetching(false);
-    }, []);
+    }, [profile]);
 
     useEffect(() => {
-        fetchProfile();
-    }, [fetchProfile]);
+        initData();
+    }, [initData]);
 
     const pickImage = async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.light();
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
@@ -60,7 +61,12 @@ export default function EditProfileScreen() {
         if (!result.canceled) {
             const asset = result.assets[0];
             if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-                Alert.alert("Payload Too Large", "Please select an image under 5MB.");
+                showDialog({
+                    title: "Payload Too Large",
+                    message: "Please select an image under 5MB for optimal synchronization.",
+                    primaryLabel: "Understood",
+                    onConfirm: () => { }
+                });
                 return;
             }
             setAvatar(asset.uri);
@@ -69,20 +75,19 @@ export default function EditProfileScreen() {
 
     const handleSave = async () => {
         if (website && !validateUrl(website)) {
-            Alert.alert("Signal Link Error", "Please enter a valid website URL.");
+            showToast({ message: "Signal Link Error: Invalid URL", type: 'error' });
             return;
         }
 
         if (hourlyRate && !validateAmount(hourlyRate)) {
-            Alert.alert("valuation Error", "Hourly rate must be a valid numeric signal.");
+            showToast({ message: "Valuation Error: Invalid Rate", type: 'error' });
             return;
         }
 
         setLoading(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptics.medium();
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No active session detected.");
 
             const updateData = {
@@ -96,11 +101,17 @@ export default function EditProfileScreen() {
             const { error } = await supabase.from('profiles').update(updateData).eq('id', user.id);
             if (error) throw error;
 
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
+            showToast({ message: "Identity Synchronized", type: 'success' });
             navigation.goBack();
         } catch (e: any) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("Sync Failure", e.message);
+            haptics.error();
+            showDialog({
+                title: "Sync Failure",
+                message: e.message || "Failed to commit changes to the node.",
+                primaryLabel: "Retry",
+                onConfirm: () => { }
+            });
         } finally {
             setLoading(false);
         }

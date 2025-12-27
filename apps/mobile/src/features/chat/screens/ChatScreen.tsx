@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraColors, AuraSpacing } from '../../../core/theme/aura';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { Send, Image as ImageIcon, Mic, Plus } from 'lucide-react-native';
+import { supabase } from '@api/supabase';
+import { AuraColors, AuraSpacing } from '@theme/aura';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { Send, Image as ImageIcon, Mic, Plus, MoreVertical, Check, CheckCheck } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { sanitizeInput } from '../../../core/utils/security';
-import * as Haptics from 'expo-haptics';
+import { sanitizeInput } from '@core/utils/security';
+import { useAuth } from '@context/AuthProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 dayjs.extend(relativeTime);
 
@@ -25,26 +26,34 @@ const MessageBubble = React.memo(({ item, isMe }: { item: any; isMe: boolean }) 
             <AuraText color={AuraColors.white} style={styles.messageText}>
                 {item.content}
             </AuraText>
-            <AuraText variant="caption" color={isMe ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)'} style={styles.time}>
-                {dayjs(item.created_at).format('h:mm A')}
-            </AuraText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 4 }}>
+                <AuraText variant="caption" color={isMe ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)'} style={{ fontSize: 10 }}>
+                    {dayjs(item.created_at).format('h:mm A')}
+                </AuraText>
+                {isMe && (
+                    item.read_at ?
+                        <CheckCheck size={12} color={AuraColors.info} /> :
+                        <Check size={12} color={AuraColors.gray400} />
+                )}
+            </View>
         </View>
     </View>
 ));
 
 export default function ChatScreen() {
+    const haptics = useAuraHaptics();
     const route = useRoute<any>();
     const navigation = useNavigation<any>();
+    const { user } = useAuth();
     const params = route.params || {};
     const { roomId, recipientName } = params;
 
     const [messages, setMessages] = useState<any[]>([]);
     const [input, setInput] = useState('');
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const flatListRef = useRef<FlatList>(null);
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id || null));
+        if (!user) return;
 
         const fetchMessages = async () => {
             const { data } = await supabase
@@ -66,21 +75,38 @@ export default function ChatScreen() {
                 filter: `room_id=eq.${roomId}`
             }, (payload) => {
                 setMessages(prev => [...prev, payload.new]);
-                if (payload.new.sender_id !== currentUserId) {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                if (payload.new.sender_id !== user.id) {
+                    haptics.success();
+                    // Mark new incoming message as read instantly if we are on screen
+                    supabase.from('messages').update({ read_at: new Date() }).eq('id', payload.new.id);
                 }
+            })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'messages',
+                filter: `room_id=eq.${roomId}`
+            }, (payload) => {
+                setMessages(current => current.map(m => m.id === payload.new.id ? payload.new : m));
             })
             .subscribe();
 
+        // Mark all existing unread messages as read
+        const markRead = async () => {
+            await supabase.from('messages')
+                .update({ read_at: new Date() })
+                .eq('room_id', roomId)
+                .neq('sender_id', user.id)
+                .is('read_at', null);
+        };
+        markRead();
+
         return () => { supabase.removeChannel(subscription); };
-    }, [roomId, currentUserId]);
+    }, [roomId, user?.id]);
 
     const sendMessage = async () => {
         const cleanInput = sanitizeInput(input);
-        if (!cleanInput) return;
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!cleanInput || !user) return;
 
         const newMessage = {
             room_id: roomId,
@@ -89,23 +115,40 @@ export default function ChatScreen() {
         };
 
         setInput('');
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.light();
 
         const { error } = await supabase.from('messages').insert(newMessage);
         if (error) {
             console.error("[Chat] Send Error:", error);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
         }
     };
 
     const renderMessage = useCallback(({ item }: { item: any }) => {
-        const isMe = item.sender_id === currentUserId;
+        const isMe = item.sender_id === user?.id;
         return <MessageBubble item={item} isMe={isMe} />;
-    }, [currentUserId]);
+    }, [user?.id]);
 
     return (
         <View style={styles.container}>
-            <AuraHeader title={recipientName || 'Terminal'} showBack />
+            <AuraHeader
+                title={recipientName || 'Terminal'}
+                showBack
+                action={{
+                    icon: <MoreVertical color={AuraColors.white} size={24} />,
+                    onPress: () => {
+                        Alert.alert(
+                            "Manage Connection",
+                            "What would you like to do?",
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Report Abuse", onPress: () => Alert.alert("Reported", "Safety team notified."), style: 'destructive' },
+                                { text: "Block User", onPress: () => Alert.alert("Blocked", "You will no longer receive messages."), style: 'destructive' }
+                            ]
+                        );
+                    }
+                }}
+            />
 
             <FlatList
                 ref={flatListRef}

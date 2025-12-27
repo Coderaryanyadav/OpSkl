@@ -1,20 +1,22 @@
 import { supabase } from './supabase';
 import { PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
+import { 
+    Profile,
+    Application,
+    Wallet,
+    Transaction,
+    RepositoryResponse,
+    PortfolioItem // Import from @types which re-exports from profile/types
+} from '@types';
+import { Gig, Review, Deliverable, EscrowTransaction, Dispute, GigFilters } from '@features/gig-discovery/types';
+
+
 
 /**
- * 🏛️ REPOSITORY PATTERN
+ * 🏛️ REPOSITORY PATTERN (FAANG EDITION)
  * Centralized data access layer with strict normalization,
  * comprehensive typing, and robust error surfacing.
  */
-
-export type RepositoryResponse<T> = {
-    data: T | null;
-    error: {
-        message: string;
-        code?: string;
-        details?: string;
-    } | null;
-};
 
 export class Repository {
     /**
@@ -38,7 +40,7 @@ export class Repository {
     /**
      * 👥 PROFILE OPERATIONS
      */
-    static async getProfile(userId: string): Promise<RepositoryResponse<any>> {
+    static async getProfile(userId: string): Promise<RepositoryResponse<Profile>> {
         const res = await supabase
             .from('profiles')
             .select('*')
@@ -47,7 +49,7 @@ export class Repository {
         return this.wrap(res);
     }
 
-    static async updateProfile(userId: string, updates: any): Promise<RepositoryResponse<any>> {
+    static async updateProfile(userId: string, updates: Partial<Profile>): Promise<RepositoryResponse<Profile>> {
         const res = await supabase
             .from('profiles')
             .update(updates)
@@ -60,17 +62,21 @@ export class Repository {
     /**
      * 🛠️ GIG OPERATIONS
      */
-    static async getGigs(filters: { status?: string; category?: string } = {}): Promise<RepositoryResponse<any[]>> {
+    static async getGigs(filters: GigFilters = {}): Promise<RepositoryResponse<Gig[]>> {
         let query = supabase.from('gigs').select('*, client:profiles(*)');
 
         if (filters.status) query = query.eq('status', filters.status);
         if (filters.category) query = query.eq('category', filters.category);
+        if (filters.title) query = query.ilike('title', `%${filters.title}%`);
+        if (filters.urgency) query = query.eq('urgency_level', filters.urgency);
+        if (filters.minBudget) query = query.gte('budget', filters.minBudget);
+        if (filters.maxBudget) query = query.lte('budget', filters.maxBudget);
 
         const res = await query.order('created_at', { ascending: false });
         return this.wrap(res);
     }
 
-    static async getGigDetails(gigId: string): Promise<RepositoryResponse<any>> {
+    static async getGigDetails(gigId: string): Promise<RepositoryResponse<Gig>> {
         const res = await supabase
             .from('gigs')
             .select('*, client:profiles(*), applications(*, worker:profiles(*))')
@@ -82,7 +88,7 @@ export class Repository {
     /**
      * 📝 APPLICATION OPERATIONS
      */
-    static async applyToGig(gigId: string, workerId: string, message?: string): Promise<RepositoryResponse<any>> {
+    static async applyToGig(gigId: string, workerId: string, message?: string): Promise<RepositoryResponse<Application>> {
         const res = await supabase
             .from('applications')
             .insert({
@@ -99,7 +105,7 @@ export class Repository {
     /**
      * 💰 FINANCIAL OPERATIONS
      */
-    static async getWalletBalance(userId: string): Promise<RepositoryResponse<any>> {
+    static async getWalletBalance(userId: string): Promise<RepositoryResponse<Wallet>> {
         const res = await supabase
             .from('wallets')
             .select('*')
@@ -108,10 +114,9 @@ export class Repository {
         return this.wrap(res);
     }
 
-    static async getTransactions(userId: string): Promise<RepositoryResponse<any[]>> {
-        // Checking for 'transactions' or 'wallet_transactions' table based on schema summary
+    static async getTransactions(userId: string): Promise<RepositoryResponse<Transaction[]>> {
         const res = await supabase
-            .from('transactions') // Normalized to match SQL schema summary
+            .from('transactions')
             .select('*')
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
@@ -119,24 +124,93 @@ export class Repository {
     }
 
     /**
-     * 💬 COMMUNICATION OPERATIONS
+     * 🛡️ TRUST & SAFETY OPERATIONS
      */
-    static async getChatRooms(userId: string): Promise<RepositoryResponse<any[]>> {
-        const res = await supabase
-            .from('chat_rooms')
-            .select('*, chat_participants!inner(*)')
-            .eq('chat_participants.user_id', userId)
-            .order('updated_at', { ascending: false });
+    static async createReview(review: Partial<Review>): Promise<RepositoryResponse<Review>> {
+        const res = await supabase.from('reviews').insert(review).select().single();
         return this.wrap(res);
     }
 
-    static async getMessages(roomId: string, limit = 50): Promise<RepositoryResponse<any[]>> {
+    static async getReviews(targetId: string): Promise<RepositoryResponse<Review[]>> {
         const res = await supabase
-            .from('messages')
-            .select('*, sender:profiles(*)')
-            .eq('room_id', roomId)
-            .order('created_at', { ascending: true })
-            .limit(limit);
+            .from('reviews')
+            .select('*, reviewer:profiles(*)')
+            .eq('target_id', targetId)
+            .order('created_at', { ascending: false });
         return this.wrap(res);
     }
+
+    static async addPortfolioItem(item: Partial<PortfolioItem>): Promise<RepositoryResponse<PortfolioItem>> {
+        const res = await supabase.from('portfolio_items').insert(item).select().single();
+        return this.wrap(res);
+    }
+
+    static async submitDeliverable(deliverable: Partial<Deliverable>): Promise<RepositoryResponse<Deliverable>> {
+        const res = await supabase.from('deliverables').insert(deliverable).select().single();
+        return this.wrap(res);
+    }
+
+    static async createEscrow(escrow: Partial<EscrowTransaction>): Promise<RepositoryResponse<EscrowTransaction>> {
+        const res = await supabase.from('escrow_transactions').insert(escrow).select().single();
+        return this.wrap(res);
+    }
+
+    static async createDispute(dispute: Partial<Dispute>): Promise<RepositoryResponse<Dispute>> {
+        const res = await supabase.from('disputes').insert(dispute).select().single();
+        return this.wrap(res);
+    }
+
+
+    /**
+     * ❤️ FAVORITES OPERATIONS
+     */
+    static async toggleFavorite(clientId: string, workerId: string): Promise<RepositoryResponse<void>> {
+        // Check if exists
+        const { data } = await supabase
+            .from('favorite_workers')
+            .select('id')
+            .eq('client_id', clientId)
+            .eq('worker_id', workerId)
+            .single();
+
+        if (data) {
+            // Remove
+            const res = await supabase.from('favorite_workers').delete().eq('id', data.id);
+            return this.wrap(res as any);
+        } else {
+            // Add
+            const res = await supabase
+                .from('favorite_workers')
+                .insert({ client_id: clientId, worker_id: workerId });
+            return this.wrap(res as any);
+        }
+    }
+
+    static async getFavorites(clientId: string): Promise<RepositoryResponse<Profile[]>> {
+        const res = await supabase
+            .from('favorite_workers')
+            .select('worker:profiles(*)')
+            .eq('client_id', clientId);
+            
+        // Map the structure to return clean Profile array
+        if (res.data) {
+            const profiles = (res.data as any).map((item: any) => item.worker);
+            return { data: profiles, error: null };
+        }
+        return this.wrap(res as any);
+    }
+
+    static async isFavorite(clientId: string, workerId: string): Promise<boolean> {
+        const { data } = await supabase
+            .from('favorite_workers')
+            .select('id')
+            .eq('client_id', clientId)
+            .eq('worker_id', workerId)
+            .single();        
+        return !!data;
+    }
+
+    /**
+     * 💬 COMMUNICATION OPERATIONS
+     */
 }

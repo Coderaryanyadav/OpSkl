@@ -1,20 +1,22 @@
 import React, { useState, useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { AuraColors, AuraSpacing, AuraBorderRadius } from '../../../core/theme/aura';
-import * as Haptics from 'expo-haptics';
-import LocationPicker from '../../../core/components/LocationPicker';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraColors, AuraSpacing, AuraBorderRadius } from '@theme/aura';
+import LocationPicker from '@core/components/LocationPicker';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraInput } from '../../../core/components/AuraInput';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { useAura } from '../../../core/context/AuraProvider';
-import { MapPin, Sparkles,
+import { AuraText } from '@core/components/AuraText';
+import { AuraInput } from '@core/components/AuraInput';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
+import {
+    MapPin, Sparkles,
     Camera, Video, Palette, GraduationCap, Bike,
     Megaphone, Smartphone, Target
 } from 'lucide-react-native';
-import { supabase } from '../../../core/api/supabase';
+import { supabase } from '@api/supabase';
 import { useNavigation } from '@react-navigation/native';
 
 const MISSION_TYPES = [
@@ -31,8 +33,10 @@ const MISSION_TYPES = [
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
 export default function CreateGigScreen() {
+    const { user } = useAuth();
     const navigation = useNavigation<any>();
     const { showDialog, showToast } = useAura();
+    const haptics = useAuraHaptics();
     const [selectedCategory, setSelectedCategory] = useState('');
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -76,16 +80,15 @@ export default function CreateGigScreen() {
 
     const handleCreate = async () => {
         if (!selectedCategory || !title || !description || !pay || !location) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             showToast({ message: "Parameters incomplete. Define mission scope.", type: 'error' });
             return;
         }
 
         setLoading(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        haptics.heavy();
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Authentication node offline.");
 
             const { error } = await supabase.from('gigs').insert({
@@ -102,7 +105,7 @@ export default function CreateGigScreen() {
 
             if (error) throw error;
 
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             showDialog({
                 title: 'Deployment Active',
                 message: 'Mission has been broadcasted to the global operative network.',
@@ -110,7 +113,7 @@ export default function CreateGigScreen() {
                 onConfirm: () => navigation.goBack()
             });
         } catch (err: any) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            haptics.error();
             showToast({ message: err.message, type: 'error' });
         } finally {
             setLoading(false);
@@ -141,7 +144,7 @@ export default function CreateGigScreen() {
                                 ]}
                                 onPress={() => {
                                     setSelectedCategory(type.label);
-                                    Haptics.selectionAsync();
+                                    haptics.selection();
                                     predictPrice();
                                 }}
                             >
@@ -213,21 +216,50 @@ export default function CreateGigScreen() {
                     </View>
 
                     {/* AI Advisor */}
-                    <AuraMotion type="slide" show={!!(predictedPrice || isPredicting)}>
-                        <View style={styles.aiAdvisor}>
-                            <View style={styles.aiHeader}>
-                                <Sparkles size={16} color={AuraColors.primary} />
-                                <AuraText variant="label" color={AuraColors.primary} style={{ marginLeft: 8 }}>PREDICTIVE ADVISOR</AuraText>
+                    {(predictedPrice || isPredicting) ? (
+                        <AuraMotion type="slide">
+                            <View style={styles.aiAdvisor}>
+                                <View style={styles.aiHeader}>
+                                    <Sparkles size={16} color={AuraColors.primary} />
+                                    <AuraText variant="label" color={AuraColors.primary} style={{ marginLeft: 8 }}>PREDICTIVE ADVISOR</AuraText>
+                                </View>
+                                {isPredicting ? (
+                                    <ActivityIndicator color={AuraColors.primary} size="small" />
+                                ) : (
+                                    <AuraText variant="bodyLarge">
+                                        Market rate suggestion: <AuraText variant="h3" color={AuraColors.primary}>₹{predictedPrice}</AuraText>
+                                    </AuraText>
+                                )}
                             </View>
-                            {isPredicting ? (
-                                <ActivityIndicator color={AuraColors.primary} size="small" />
-                            ) : (
-                                <AuraText variant="bodyLarge">
-                                    Market rate suggestion: <AuraText variant="h3" color={AuraColors.primary}>₹{predictedPrice}</AuraText>
+                        </AuraMotion>
+                    ) : null}
+
+                    {/* Platform Fee Transparency */}
+                    {pay && parseInt(pay) > 0 && (
+                        <AuraMotion type="slide">
+                            <View style={styles.feeCard}>
+                                <View style={styles.feeHeader}>
+                                    <Target size={16} color={AuraColors.warning} />
+                                    <AuraText variant="label" color={AuraColors.warning} style={{ marginLeft: 8 }}>PAYMENT BREAKDOWN</AuraText>
+                                </View>
+                                <View style={styles.feeRow}>
+                                    <AuraText variant="body" color={AuraColors.gray400}>Worker receives</AuraText>
+                                    <AuraText variant="bodyBold">₹{parseInt(pay)}</AuraText>
+                                </View>
+                                <View style={styles.feeRow}>
+                                    <AuraText variant="body" color={AuraColors.gray400}>Platform fee (15%)</AuraText>
+                                    <AuraText variant="bodyBold" color={AuraColors.gray500}>₹{Math.round(parseInt(pay) * 0.15)}</AuraText>
+                                </View>
+                                <View style={[styles.feeRow, styles.feeDivider]}>
+                                    <AuraText variant="bodyBold">Total you pay</AuraText>
+                                    <AuraText variant="h3" color={AuraColors.primary}>₹{Math.round(parseInt(pay) * 1.15)}</AuraText>
+                                </View>
+                                <AuraText variant="caption" color={AuraColors.gray600} style={{ marginTop: 8 }}>
+                                    Funds held in escrow until delivery confirmed
                                 </AuraText>
-                            )}
-                        </View>
-                    </AuraMotion>
+                            </View>
+                        </AuraMotion>
+                    )}
 
                     {/* Priority Allocation */}
                     <View style={styles.prioritySection}>
@@ -241,7 +273,7 @@ export default function CreateGigScreen() {
                                         urgency === level && styles.priorityBtnActive,
                                         urgency === level && level === 'high' && { borderColor: AuraColors.error }
                                     ]}
-                                    onPress={() => { setUrgency(level); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                                    onPress={() => { setUrgency(level); haptics.light(); }}
                                 >
                                     <AuraText
                                         variant="label"
@@ -379,6 +411,31 @@ const styles = StyleSheet.create({
     priorityBtnActive: {
         borderColor: AuraColors.primary,
         backgroundColor: 'rgba(0, 122, 255, 0.05)',
+    },
+    feeCard: {
+        backgroundColor: 'rgba(255, 159, 10, 0.05)',
+        padding: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 159, 10, 0.2)',
+        marginBottom: 24,
+    },
+    feeHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    feeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    feeDivider: {
+        paddingTop: 12,
+        marginTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255, 159, 10, 0.2)',
     },
     footer: {
         paddingHorizontal: AuraSpacing.xl,

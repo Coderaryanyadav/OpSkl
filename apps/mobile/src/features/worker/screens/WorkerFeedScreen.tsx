@@ -1,40 +1,99 @@
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { PanGestureHandler, GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    useAnimatedGestureHandler,
     withSpring,
     interpolate,
     Extrapolate,
     runOnJS,
 } from 'react-native-reanimated';
-import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '../../../core/theme/aura';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraInput } from '../../../core/components/AuraInput';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { useAura } from '../../../core/context/AuraProvider';
-import { Repository } from '../../../core/api/repository';
-import { supabase } from '../../../core/api/supabase';
+import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraInput } from '@core/components/AuraInput';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
+import { useGigStore } from '@store/useGigStore';
+import { Repository } from '@api/repository';
 import GigCard from '../components/GigCard';
 import { Search, Sparkles, Filter, X, Check } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { Gig } from '@types';
 
 const { width } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.35;
 
+const FeedLoader = () => {
+    const { feedLoading, searchLoading } = useGigStore();
+    const isLoading = feedLoading || searchLoading;
+
+    if (!isLoading) return null;
+
+    return (
+        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', zIndex: 50, pointerEvents: 'none' }]}>
+            <View style={{ padding: 20, backgroundColor: AuraColors.surfaceElevated, borderRadius: 16, opacity: 0.9 }}>
+                <ActivityIndicator size="large" color={AuraColors.primary} />
+            </View>
+        </View>
+    );
+};
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import OnboardingOverlay from '../components/OnboardingOverlay';
+import FilterModal from '../components/FilterModal';
+
+// ... (imports)
+
 export default function WorkerFeedScreen() {
-    const { gigs: globalGigs, loading: globalLoading, refreshData, showToast } = useAura();
+    const { showToast } = useAura();
+    const { user } = useAuth();
+    const {
+        gigs: feedGigs,
+        searchResult,
+        fetchGigs,
+        searchGigsAI,
+        clearSearch
+    } = useGigStore();
+    const haptics = useAuraHaptics();
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const [isAiSearch, setIsAiSearch] = useState(false);
+    const [showTutorial, setShowTutorial] = useState(false);
 
-    // Optimized local state for the deck
+    useEffect(() => {
+        checkTutorial();
+        fetchGigs();
+    }, [fetchGigs]);
+
+    const checkTutorial = async () => {
+        const hasSeen = await AsyncStorage.getItem('hasSeenSwipeTutorial');
+        if (!hasSeen) setShowTutorial(true);
+    };
+
+    const finishTutorial = async () => {
+        setShowTutorial(false);
+        await AsyncStorage.setItem('hasSeenSwipeTutorial', 'true');
+        haptics.success();
+    };
+
+    // Choose data source based on search state
     const localGigs = useMemo(() => {
-        return globalGigs.filter(g => g.status === 'open');
-    }, [globalGigs]);
+        const sourceData = searchResult ?? feedGigs;
+        return sourceData.filter((g: Gig) => g.status === 'open');
+    }, [feedGigs, searchResult]);
+
+    // Reset index when data source changes
+    useEffect(() => {
+        setCurrentIndex(0);
+    }, [searchResult]);
+
+    // ... (Swipe logic omitted, same as before)
+    // Re-create swipe handlers here if replacing full function or just inject loader above return
+    // Since I must replace the whole function to insert the loader cleanly at root:
 
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
@@ -44,9 +103,8 @@ export default function WorkerFeedScreen() {
         if (!currentGig) return;
 
         if (direction === 'right') {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
 
-            const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { error } = await Repository.applyToGig(currentGig.id, user.id);
                 if (error) {
@@ -56,7 +114,7 @@ export default function WorkerFeedScreen() {
                 }
             }
         } else {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            haptics.medium();
         }
 
         translateX.value = 0;
@@ -64,16 +122,12 @@ export default function WorkerFeedScreen() {
         setCurrentIndex(prev => prev + 1);
     };
 
-    const gestureHandler = useAnimatedGestureHandler({
-        onStart: (_, ctx: any) => {
-            ctx.startX = translateX.value;
-            ctx.startY = translateY.value;
-        },
-        onActive: (event, ctx) => {
-            translateX.value = ctx.startX + event.translationX;
-            translateY.value = ctx.startY + event.translationY;
-        },
-        onEnd: (event) => {
+    const gesture = Gesture.Pan()
+        .onUpdate((event) => {
+            translateX.value = event.translationX;
+            translateY.value = event.translationY;
+        })
+        .onEnd((event) => {
             if (Math.abs(event.translationX) > SWIPE_THRESHOLD) {
                 const direction = event.translationX > 0 ? 'right' : 'left';
                 translateX.value = withSpring(direction === 'right' ? width * 1.5 : -width * 1.5);
@@ -82,8 +136,7 @@ export default function WorkerFeedScreen() {
                 translateX.value = withSpring(0);
                 translateY.value = withSpring(0);
             }
-        },
-    });
+        });
 
     const cardStyle = useAnimatedStyle(() => {
         const rotate = interpolate(
@@ -128,10 +181,75 @@ export default function WorkerFeedScreen() {
         };
     });
 
-    if (currentIndex >= localGigs.length) {
-        return (
-            <View style={styles.container}>
-                <AuraHeader title="Discovery" showBack={false} />
+    const handleSearch = () => {
+        if (!searchQuery.trim()) {
+            clearSearch();
+            return;
+        }
+
+        if (isAiSearch) {
+            searchGigsAI(searchQuery);
+        } else {
+            searchGigsAI(searchQuery);
+        }
+    };
+
+    const [showFilters, setShowFilters] = useState(false);
+    const [activeFilters, setActiveFilters] = useState({});
+
+    // Apply Filter Logic
+    const handleApplyFilters = (filters: any) => {
+        setActiveFilters(filters);
+        // If filters are active, we refetch with them
+        fetchGigs(filters);
+    };
+
+    // Simplified Return Structure with Loader
+    return (
+        <GestureHandlerRootView style={styles.container}>
+            {showTutorial && <OnboardingOverlay onComplete={finishTutorial} />}
+            <FilterModal
+                visible={showFilters}
+                onClose={() => setShowFilters(false)}
+                onApply={handleApplyFilters}
+            />
+            <FeedLoader />
+            <AuraHeader title="Discovery" showBack={false} />
+
+            <View style={styles.searchContainer}>
+                <View style={styles.searchInputWrapper}>
+                    {/* Search Input Logic (Same as before) */}
+                    <AuraInput
+                        placeholder={isAiSearch ? "Describe what you want..." : "Search missions..."}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onSubmitEditing={handleSearch}
+                        returnKeyType="search"
+                        leftIcon={<Search size={18} color={AuraColors.gray500} />}
+                        containerStyle={styles.searchBar}
+                    />
+                    {/* AI Toggle */}
+                    <TouchableOpacity
+                        style={[styles.aiToggle, isAiSearch && styles.aiToggleActive]}
+                        onPress={() => {
+                            setIsAiSearch(!isAiSearch);
+                            haptics.medium();
+                        }}
+                    >
+                        <Sparkles size={18} color={isAiSearch ? AuraColors.white : AuraColors.gray500} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Filter Button */}
+                <TouchableOpacity
+                    style={[styles.filterBtn, Object.keys(activeFilters).length > 0 && styles.filterBtnActive]}
+                    onPress={() => { setShowFilters(true); haptics.selection(); }}
+                >
+                    <Filter size={20} color={Object.keys(activeFilters).length > 0 ? AuraColors.white : AuraColors.gray400} />
+                </TouchableOpacity>
+            </View>
+
+            {currentIndex >= localGigs.length ? (
                 <View style={[styles.center, { padding: 40 }]}>
                     <AuraMotion type="zoom" style={styles.emptyIconBox}>
                         <Check size={48} color={AuraColors.primary} />
@@ -143,82 +261,64 @@ export default function WorkerFeedScreen() {
                     <TouchableOpacity
                         style={styles.refreshBtn}
                         onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            haptics.light();
                             setCurrentIndex(0);
-                            refreshData();
+                            fetchGigs();
                         }}
                     >
                         <AuraText variant="label" color={AuraColors.primary}>Force Sync</AuraText>
                     </TouchableOpacity>
                 </View>
-            </View>
-        );
-    }
+            ) : (
+                <View style={styles.cardStack}>
+                    {localGigs[currentIndex + 1] && (
+                        <Animated.View style={[styles.cardWrapper, nextCardStyle]}>
+                            <GigCard gig={localGigs[currentIndex + 1]} />
+                        </Animated.View>
+                    )}
 
-    return (
-        <GestureHandlerRootView style={styles.container}>
-            <AuraHeader title="Discovery" showBack={false} />
+                    <GestureDetector gesture={gesture}>
+                        <Animated.View style={[styles.cardWrapper, cardStyle]}>
+                            <GigCard gig={localGigs[currentIndex]} />
 
-            <View style={styles.searchContainer}>
-                <View style={styles.searchInputWrapper}>
-                    <AuraInput
-                        placeholder={isAiSearch ? "Describe what you want..." : "Search missions..."}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        leftIcon={<Search size={18} color={AuraColors.gray500} />}
-                        containerStyle={styles.searchBar}
-                    />
+                            <Animated.View style={[styles.overlayShadow, styles.likeOverlay, likeOpacity]}>
+                                <AuraText variant="h1" color={AuraColors.success} style={styles.overlayText}>APPLY</AuraText>
+                            </Animated.View>
+
+                            <Animated.View style={[styles.overlayShadow, styles.nopeOverlay, nopeOpacity]}>
+                                <AuraText variant="h1" color={AuraColors.error} style={styles.overlayText}>PASS</AuraText>
+                            </Animated.View>
+                        </Animated.View>
+                    </GestureDetector>
+                </View>
+            )}
+
+            {/* Controls only show if cards exist */}
+            {currentIndex < localGigs.length && (
+                <View style={styles.controls}>
                     <TouchableOpacity
-                        style={[styles.aiToggle, isAiSearch && styles.aiToggleActive]}
+                        style={styles.controlBtn}
                         onPress={() => {
-                            setIsAiSearch(!isAiSearch);
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            translateX.value = withSpring(-width * 1.5);
+                            runOnJS(handleSwipeComplete)('left');
                         }}
                     >
-                        <Sparkles size={18} color={isAiSearch ? AuraColors.white : AuraColors.gray500} />
+                        <X size={28} color={AuraColors.error} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.controlBtn, styles.primaryBtn]}
+                        onPress={() => {
+                            translateX.value = withSpring(width * 1.5);
+                            runOnJS(handleSwipeComplete)('right');
+                        }}
+                    >
+                        <Check size={32} color={AuraColors.white} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.controlBtn}>
+                        <Filter size={24} color={AuraColors.gray300} />
                     </TouchableOpacity>
                 </View>
-            </View>
-
-            <View style={styles.cardStack}>
-                {localGigs[currentIndex + 1] && (
-                    <Animated.View style={[styles.cardWrapper, nextCardStyle]}>
-                        <GigCard gig={localGigs[currentIndex + 1]} />
-                    </Animated.View>
-                )}
-
-                <PanGestureHandler onGestureEvent={gestureHandler}>
-                    <Animated.View style={[styles.cardWrapper, cardStyle]}>
-                        <GigCard gig={localGigs[currentIndex]} />
-
-                        <Animated.View style={[styles.overlayShadow, styles.likeOverlay, likeOpacity]}>
-                            <AuraText variant="h1" color={AuraColors.success} style={styles.overlayText}>APPLY</AuraText>
-                        </Animated.View>
-
-                        <Animated.View style={[styles.overlayShadow, styles.nopeOverlay, nopeOpacity]}>
-                            <AuraText variant="h1" color={AuraColors.error} style={styles.overlayText}>PASS</AuraText>
-                        </Animated.View>
-                    </Animated.View>
-                </PanGestureHandler>
-            </View>
-
-            <View style={styles.controls}>
-                <TouchableOpacity
-                    style={styles.controlBtn}
-                    onPress={() => translateX.value = withSpring(-width * 1.5, {}, () => runOnJS(handleSwipeComplete)('left'))}
-                >
-                    <X size={28} color={AuraColors.error} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.controlBtn, styles.primaryBtn]}
-                    onPress={() => translateX.value = withSpring(width * 1.5, {}, () => runOnJS(handleSwipeComplete)('right'))}
-                >
-                    <Check size={32} color={AuraColors.white} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.controlBtn}>
-                    <Filter size={24} color={AuraColors.gray300} />
-                </TouchableOpacity>
-            </View>
+            )}
         </GestureHandlerRootView>
     );
 }
@@ -237,11 +337,30 @@ const styles = StyleSheet.create({
         paddingHorizontal: AuraSpacing.xl,
         paddingTop: 12,
         zIndex: 10,
+        flexDirection: 'row', // Added for horizontal layout
+        alignItems: 'center', // Added for vertical alignment
+        gap: 12, // Added for spacing between search input and filter button
     },
     searchInputWrapper: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+    },
+    // Missing style additions
+    filterBtn: {
+        width: 48,
+        height: 48,
+        backgroundColor: AuraColors.surfaceElevated,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: AuraColors.gray800,
+        ...AuraShadows.soft,
+    },
+    filterBtnActive: {
+        backgroundColor: AuraColors.primary,
+        borderColor: AuraColors.primary,
     },
     searchBar: {
         flex: 1,

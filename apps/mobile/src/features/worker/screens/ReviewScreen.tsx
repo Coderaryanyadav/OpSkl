@@ -1,19 +1,25 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, Alert, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraInput } from '../../../core/components/AuraInput';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraInput } from '@core/components/AuraInput';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
 import { Star, Target, ShieldCheck } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { useAuth } from '@context/AuthProvider';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { Repository } from '@api/repository';
+import { supabase } from '@api/supabase'; // Import supabase for gig update
 
 export default function ReviewScreen() {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
+    const { user } = useAuth();
+    const { showDialog, showToast } = useAura();
     const { gigId, targetUserId, targetUserName = 'Personnel' } = route.params || {};
 
     const [rating, setRating] = useState(0);
@@ -21,25 +27,24 @@ export default function ReviewScreen() {
     const [submitting, setSubmitting] = useState(false);
 
     const handleRatingSelect = useCallback((val: number) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptics.medium();
         setRating(val);
     }, []);
 
     const handleSubmit = async () => {
         if (rating === 0) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("Rating Required", "Select performance tier (1-5 stars).");
+            haptics.error();
+            showToast({ message: "Rating Required: Select performance tier.", type: 'error' });
             return;
         }
 
         setSubmitting(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        haptics.heavy();
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No primary session found.");
 
-            const { error } = await supabase.from('reviews').insert({
+            const { error: reviewError } = await Repository.createReview({
                 gig_id: gigId,
                 reviewer_id: user.id,
                 target_id: targetUserId,
@@ -47,18 +52,26 @@ export default function ReviewScreen() {
                 comment
             });
 
-            if (error) throw error;
+            if (reviewError) throw new Error(reviewError.message);
 
-            await supabase.from('gigs').update({ status: 'completed' }).eq('id', gigId);
+            const { error: updateError } = await supabase
+                .from('gigs')
+                .update({ status: 'completed' })
+                .eq('id', gigId);
 
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert("Evaluation Recorded", "Final performance metrics have been securely logged.", [
-                { text: "CLOSE CONSOLE", onPress: () => navigation.goBack() }
-            ]);
+            if (updateError) throw updateError;
+
+            haptics.success();
+            showDialog({
+                title: 'Evaluation Recorded',
+                message: "Final performance metrics have been securely logged and synchronized with the global trust index.",
+                primaryLabel: 'CLOSE CONSOLE',
+                onConfirm: () => navigation.goBack()
+            });
 
         } catch (error: any) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("System Failure", error.message);
+            haptics.error();
+            showToast({ message: error.message, type: 'error' });
         } finally {
             setSubmitting(false);
         }
@@ -93,8 +106,8 @@ export default function ReviewScreen() {
                             >
                                 <Star
                                     size={40}
-                                    color={star <= rating ? AuraColors.white : AuraColors.gray200}
-                                    fill={star <= rating ? AuraColors.white : 'transparent'}
+                                    color={star <= rating ? AuraColors.warning : AuraColors.gray200}
+                                    fill={star <= rating ? AuraColors.warning : 'transparent'}
                                     strokeWidth={star <= rating ? 2 : 1.5}
                                 />
                             </TouchableOpacity>

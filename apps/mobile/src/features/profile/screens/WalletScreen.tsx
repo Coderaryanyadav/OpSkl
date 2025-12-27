@@ -1,58 +1,50 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '../../../core/theme/aura';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Platform } from 'react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
 import { ArrowUpRight, ArrowDownLeft, TrendingUp, ShieldCheck, History, CreditCard, Download, ExternalLink } from 'lucide-react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraBadge } from '../../../core/components/AuraBadge';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { useAura } from '../../../core/context/AuraProvider';
-import { Repository } from '../../../core/api/repository';
-import * as Haptics from 'expo-haptics';
-import { supabase } from '../../../core/api/supabase';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraBadge } from '@core/components/AuraBadge';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
+import { useWalletStore } from '@store/useWalletStore';
 
 dayjs.extend(relativeTime);
 
 const RAZORPAY_KEY = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || '';
 
 export default function WalletScreen() {
-    const { wallet, refreshData, showDialog, showToast } = useAura();
-    const [transactions, setTransactions] = useState<any[]>([]);
-    const [loadingLocal, setLoadingLocal] = useState(true);
+    const haptics = useAuraHaptics();
+    const { showDialog, showToast } = useAura();
+    const { user } = useAuth();
+    const { wallet, transactions, loading, sync } = useWalletStore();
     const [refreshing, setRefreshing] = useState(false);
 
-    const fetchTransactions = useCallback(async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data } = await Repository.getTransactions(user.id);
-            if (data) setTransactions(data);
-        } catch (error) {
-            console.error("[Treasury] Ledger Sync Error:", error);
-            showToast({ message: "Ledger sync failed", type: 'error' });
-        } finally {
-            setLoadingLocal(false);
-            setRefreshing(false);
+    const handleSync = useCallback(async () => {
+        if (user) {
+            await sync(user.id);
         }
-    }, [showToast]);
+    }, [user, sync]);
 
     useEffect(() => {
-        fetchTransactions();
-    }, [fetchTransactions]);
+        handleSync();
+    }, [handleSync]);
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        await Promise.all([refreshData(), fetchTransactions()]);
+        haptics.medium();
+        await handleSync();
+        setRefreshing(false);
     };
 
     const handleWithdraw = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        haptics.warning();
         const balance = wallet?.balance || 0;
 
         if (balance < 100) {
@@ -70,7 +62,7 @@ export default function WalletScreen() {
             message: `Withdraw ₹${balance.toLocaleString()} to your primary bank node?`,
             type: 'warning',
             onConfirm: () => {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                haptics.success();
                 showToast({ message: "Payout cycle initiated", type: 'success' });
             }
         });
@@ -82,7 +74,7 @@ export default function WalletScreen() {
             return;
         }
 
-        Haptics.selectionAsync();
+        haptics.selection();
         const amount = 500; // Fixed denom for demo
         const options = {
             description: 'AURA CORE CREDITS DEPOSIT',
@@ -95,7 +87,7 @@ export default function WalletScreen() {
         };
 
         RazorpayCheckout.open(options).then(async () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
             showToast({ message: "Liquidity injected successfully", type: 'success' });
             await handleRefresh();
         }).catch((error: any) => {
@@ -174,7 +166,7 @@ export default function WalletScreen() {
                 </View>
 
                 <View style={styles.ledgerList}>
-                    {loadingLocal ? (
+                    {loading ? (
                         <View style={styles.loaderBox}>
                             <ActivityIndicator color={AuraColors.primary} />
                         </View>
@@ -184,7 +176,7 @@ export default function WalletScreen() {
                             <AuraText variant="body" color={AuraColors.gray500} style={{ marginTop: 16 }}>No operational signals recorded.</AuraText>
                         </View>
                     ) : (
-                        transactions.map((tx, index) => (
+                        transactions.map((tx: any, index: number) => (
                             <AuraMotion key={tx.id} type="slide" delay={100 + index * 40}>
                                 <View style={styles.txItem}>
                                     <View style={[styles.txIndicator, { backgroundColor: tx.type === 'credit' ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 255, 255, 0.05)' }]}>
@@ -192,7 +184,7 @@ export default function WalletScreen() {
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <AuraText variant="bodyBold" numberOfLines={1}>{tx.description}</AuraText>
-                                        <AuraText variant="caption" color={AuraColors.gray500}>{dayjs(tx.created_at).fromNow().toUpperCase()}</AuraText>
+                                        <AuraText variant="caption" color={AuraColors.textSecondary}>{dayjs(tx.created_at).fromNow().toUpperCase()}</AuraText>
                                     </View>
                                     <View style={{ alignItems: 'flex-end' }}>
                                         <AuraText variant="bodyBold" color={tx.type === 'credit' ? AuraColors.success : AuraColors.white}>

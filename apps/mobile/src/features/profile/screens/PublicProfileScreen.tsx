@@ -1,37 +1,59 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraAvatar } from '../../../core/components/AuraAvatar';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraBadge } from '../../../core/components/AuraBadge';
-import { AuraLoader } from '../../../core/components/AuraLoader';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
-import { MessageSquare, Target, ShieldCheck } from 'lucide-react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { supabase } from '@api/supabase';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraAvatar } from '@core/components/AuraAvatar';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraBadge } from '@core/components/AuraBadge';
+import { AuraLoader } from '@core/components/AuraLoader';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
+import { MessageSquare, Target, ShieldCheck, Heart } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
+import { useAuth } from '@context/AuthProvider';
+import { Repository } from '@api/repository';
 
 export default function PublicProfileScreen() {
+    const haptics = useAuraHaptics();
     const route = useRoute();
     const navigation = useNavigation<any>();
     const { userId } = (route.params as { userId: string }) || {};
+    const { user } = useAuth(); // Logged in user
 
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isFavorite, setIsFavorite] = useState(false);
 
     const fetchProfile = useCallback(async () => {
         try {
             const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
             if (error) throw error;
             setProfile(data);
+
+            // Check favorite status
+            if (user) {
+                const favStatus = await Repository.isFavorite(user.id, userId);
+                setIsFavorite(favStatus);
+            }
         } catch (e) {
             console.error('Fetch Public Profile Error:', e);
         } finally {
             setLoading(false);
         }
-    }, [userId]);
+    }, [userId, user]);
+
+    const handleToggleFavorite = async () => {
+        if (!user) return;
+
+        // Optimistic update
+        const newVal = !isFavorite;
+        setIsFavorite(newVal);
+        haptics.selection();
+
+        await Repository.toggleFavorite(user.id, userId);
+    };
 
     useEffect(() => {
         if (userId) fetchProfile();
@@ -46,7 +68,19 @@ export default function PublicProfileScreen() {
 
     return (
         <View style={styles.container}>
-            <AuraHeader title="Operative Dossier" showBack />
+            <AuraHeader
+                title="OPERATIVE DOSSIER"
+                showBack
+                rightElement={
+                    <TouchableOpacity onPress={handleToggleFavorite} style={{ padding: 8 }}>
+                        <Heart
+                            size={24}
+                            color={isFavorite ? AuraColors.error : AuraColors.gray500}
+                            fill={isFavorite ? AuraColors.error : 'transparent'}
+                        />
+                    </TouchableOpacity>
+                }
+            />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
                 <AuraMotion type="zoom" duration={800} style={styles.heroSection}>
@@ -107,7 +141,7 @@ export default function PublicProfileScreen() {
                     <AuraButton
                         title="ENGAGE SECURE CHAT"
                         onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            haptics.medium();
                             navigation.navigate('Chat', { roomId: `direct_${profile?.id}`, recipientName: profile?.full_name });
                         }}
                         icon={<MessageSquare size={18} color={AuraColors.black} />}
@@ -116,7 +150,7 @@ export default function PublicProfileScreen() {
                         title="DEPLOY DIRECT ASSIGNMENT"
                         variant="outline"
                         onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            haptics.medium();
                             navigation.navigate('CreateGig', { targetUserId: userId });
                         }}
                         icon={<Target size={18} color={AuraColors.white} />}

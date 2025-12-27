@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraColors } from '../../../core/theme/aura';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraColors } from '@theme/aura';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 export default function PrivacyPolicyScreen() {

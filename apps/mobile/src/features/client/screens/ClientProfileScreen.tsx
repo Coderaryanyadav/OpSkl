@@ -1,43 +1,48 @@
 import React, { useEffect, useState } from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, ScrollView, TouchableOpacity, StyleSheet, Alert, Dimensions } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraColors, AuraShadows } from '../../../core/theme/aura';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraListItem } from '../../../core/components/AuraListItem';
-import { AuraMotion } from '../../../core/components/AuraMotion';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { supabase } from '@api/supabase';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraColors, AuraShadows } from '@theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraText } from '@core/components/AuraText';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraListItem } from '@core/components/AuraListItem';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import {
     Briefcase, Wallet, Settings,
     LogOut, User, ChevronRight, Zap, Shield,
     Bell, ExternalLink
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useAuth } from '@context/AuthProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 const { width } = Dimensions.get('window');
 
 export default function ClientProfileScreen() {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
-    const [profile, setProfile] = useState<any>(null);
+    const { user, profile } = useAuth();
+    const { showDialog } = useAura();
     const [stats, setStats] = useState({ posted: 0, active: 0, completed: 0 });
 
     useEffect(() => {
-        fetchProfile();
-        fetchStats();
-    }, []);
-
-    const fetchProfile = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (data) setProfile(data);
-    };
+        if (user) {
+            fetchStats();
+        }
+    }, [user]);
 
     const fetchStats = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-
         const { data: gigs } = await supabase.from('gigs').select('status').eq('client_id', user.id);
         if (gigs) {
             setStats({
@@ -49,18 +54,16 @@ export default function ClientProfileScreen() {
     };
 
     const handleLogout = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        Alert.alert('De-authorize Console', 'Synchronized session will be terminated. Continue?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Terminate',
-                style: 'destructive',
-                onPress: async () => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                    await supabase.auth.signOut();
-                }
+        haptics.warning();
+        showDialog({
+            title: 'De-authorize Console',
+            message: 'Synchronized session will be terminated and all encrypted tunnels closed. Continue?',
+            type: 'warning',
+            onConfirm: async () => {
+                haptics.heavy();
+                await supabase.auth.signOut();
             }
-        ]);
+        });
     };
 
     return (
@@ -114,7 +117,7 @@ export default function ClientProfileScreen() {
                         subtitle="Sync credits and settlements"
                         leftIcon={<Wallet size={20} color={AuraColors.white} />}
                         rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
-                        onPress={() => { Haptics.selectionAsync(); navigation.navigate('Wallet'); }}
+                        onPress={() => { haptics.selection(); navigation.navigate('Wallet'); }}
                     />
                     <View style={styles.divider} />
                     <AuraListItem
@@ -122,7 +125,7 @@ export default function ClientProfileScreen() {
                         subtitle="History of all pushed missions"
                         leftIcon={<Briefcase size={20} color={AuraColors.white} />}
                         rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
-                        onPress={() => { Haptics.selectionAsync(); navigation.navigate('Manage'); }}
+                        onPress={() => { haptics.selection(); navigation.navigate('Manage'); }}
                     />
                     <View style={styles.divider} />
                     <AuraListItem
@@ -130,7 +133,7 @@ export default function ClientProfileScreen() {
                         subtitle="Verified field specialists"
                         leftIcon={<Zap size={20} color={AuraColors.white} />}
                         rightElement={<ExternalLink size={16} color={AuraColors.gray700} />}
-                        onPress={() => { Haptics.selectionAsync(); navigation.navigate('Feed'); }}
+                        onPress={() => { haptics.selection(); navigation.navigate('Feed'); }}
                     />
                 </AuraMotion>
 
@@ -143,14 +146,14 @@ export default function ClientProfileScreen() {
                         title="Console Adjustments"
                         leftIcon={<Settings size={20} color={AuraColors.white} />}
                         rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
-                        onPress={() => { Haptics.selectionAsync(); navigation.navigate('Settings'); }}
+                        onPress={() => { haptics.selection(); navigation.navigate('Settings'); }}
                     />
                     <View style={styles.divider} />
                     <AuraListItem
                         title="Operational Alerts"
                         leftIcon={<Bell size={20} color={AuraColors.white} />}
                         rightElement={<View style={styles.notifyDot} />}
-                        onPress={() => { Haptics.selectionAsync(); navigation.navigate('Notifications'); }}
+                        onPress={() => { haptics.selection(); navigation.navigate('Notifications'); }}
                     />
                 </AuraMotion>
 

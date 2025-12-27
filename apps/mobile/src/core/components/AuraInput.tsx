@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { AuraColors, AuraTypography, AuraBorderRadius } from '../theme/aura';
 import { Eye, EyeOff, CheckCircle, AlertCircle, Mail, Lock, Phone, User, Search } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '../hooks/useAuraHaptics';
 
 interface AuraInputProps extends TextInputProps {
     label?: string;
@@ -36,13 +36,14 @@ export const AuraInput: React.FC<AuraInputProps> = ({
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const haptics = useAuraHaptics();
 
     const focusProgress = useSharedValue(0);
 
     const handleFocus = (e: any) => {
         setIsFocused(true);
         focusProgress.value = withSpring(1);
-        Haptics.selectionAsync();
+        haptics.selection();
         onFocus?.(e);
     };
 
@@ -82,7 +83,7 @@ export const AuraInput: React.FC<AuraInputProps> = ({
                 [0, 1],
                 [AuraColors.surfaceElevated, AuraColors.surfaceLight]
             ),
-        };
+        } as any;
     });
 
     const getIcon = () => {
@@ -105,8 +106,7 @@ export const AuraInput: React.FC<AuraInputProps> = ({
             <Animated.View style={[styles.inputContainer, animatedBorderStyle]}>
                 {label && (
                     <Animated.Text
-                        pointerEvents="none"
-                        style={[styles.floatingLabel, AuraTypography.body, animatedLabelStyle]}
+                        style={[styles.floatingLabel, AuraTypography.body, animatedLabelStyle] as any}
                     >
                         {label}
                     </Animated.Text>
@@ -138,7 +138,7 @@ export const AuraInput: React.FC<AuraInputProps> = ({
                     {secureTextEntry && (
                         <TouchableOpacity
                             onPress={() => {
-                                Haptics.selectionAsync();
+                                haptics.selection();
                                 setIsPasswordVisible(!isPasswordVisible);
                             }}
                             style={styles.eyeBtn}
@@ -154,7 +154,7 @@ export const AuraInput: React.FC<AuraInputProps> = ({
             </Animated.View>
 
             {error && (
-                <Animated.Text entering={FadeIn} style={styles.errorText}>
+                <Animated.Text entering={FadeIn} style={styles.errorText as any}>
                     {error}
                 </Animated.Text>
             )}

@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Modal } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, ZoomIn, FadeOut } from 'react-native-reanimated';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraBorderRadius, AuraShadows } from '../theme/aura';
 import { AuraButton } from './AuraButton';
 import { AuraText } from './AuraText';
-import * as Haptics from 'expo-haptics';
 
 interface AuraDialogProps {
     visible: boolean;
@@ -23,6 +23,7 @@ export const AuraDialog: React.FC<AuraDialogProps> = ({
     onCancel,
     type = 'info'
 }) => {
+    const haptics = useAuraHaptics();
     const scale = useSharedValue(0.8);
     const rotation = useSharedValue(0);
 
@@ -35,9 +36,9 @@ export const AuraDialog: React.FC<AuraDialogProps> = ({
                     withTiming(5, { duration: 50 }),
                     withTiming(0, { duration: 50 })
                 );
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                haptics.error();
             } else {
-                Haptics.selectionAsync();
+                haptics.selection();
             }
         } else {
             scale.value = 0.8;
@@ -53,7 +54,7 @@ export const AuraDialog: React.FC<AuraDialogProps> = ({
     return (
         <Modal transparent visible={visible} animationType="none">
             <Animated.View exiting={FadeOut} style={styles.overlay}>
-                <Animated.View entering={ZoomIn} style={[styles.dialog, animatedStyle]}>
+                <Animated.View entering={ZoomIn} style={[styles.dialog, animatedStyle] as any}>
                     <AuraText variant="h3" align="center" style={{ marginBottom: 12 }}>
                         {title}
                     </AuraText>

@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraInput } from '../../../core/components/AuraInput';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraColors, AuraSpacing } from '../../../core/theme/aura';
+import { supabase } from '@api/supabase';
+import { AuraText } from '@core/components/AuraText';
+import { AuraInput } from '@core/components/AuraInput';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraColors, AuraSpacing } from '@theme/aura';
 import { ArrowRight } from 'lucide-react-native';
-import { checkRateLimit, secureLog } from '../../../core/utils/security';
-import { validateEmail, validatePassword } from '../../../utils/validation';
+import { checkRateLimit, secureLog } from '@core/utils/security';
+import { validateEmail, validatePassword } from '@core/utils/validation';
+import { useAura } from '@core/context/AuraProvider';
 
 export default function SignUpScreen() {
     const navigation = useNavigation<any>();
+    const { showDialog } = useAura();
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -57,13 +59,22 @@ export default function SignUpScreen() {
             if (data.session) {
                 secureLog('User created successfully');
             } else if (data.user && !data.session) {
-                Alert.alert('Verification Sent', 'Please check your email to verify your account.');
-                navigation.navigate('Login');
+                showDialog({
+                    title: 'Verification Sent',
+                    message: 'Please check your email to verify your account and activate your operative node.',
+                    primaryLabel: 'Acknowledged',
+                    onConfirm: () => navigation.navigate('Login')
+                });
             }
 
-        } catch (err: any) {
-            secureLog('Signup failed', err.message);
-            setErrorMsg(err.message || "Failed to create account.");
+        } catch (error: any) {
+            secureLog('Signup error', error);
+            showDialog({
+                title: 'Provisioning Failed',
+                message: error.message || 'An error occurred during operative enrollment.',
+                primaryLabel: 'Retry',
+                onConfirm: () => { }
+            });
         } finally {
             setLoading(false);
         }

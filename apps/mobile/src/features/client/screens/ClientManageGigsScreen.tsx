@@ -1,64 +1,62 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '../../../core/theme/aura';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraLoader } from '../../../core/components/AuraLoader';
-import { AuraBadge } from '../../../core/components/AuraBadge';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { useAura } from '../../../core/context/AuraProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { supabase } from '@api/supabase';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraText } from '@core/components/AuraText';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraLoader } from '@core/components/AuraLoader';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraBadge } from '@core/components/AuraBadge';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useAuth } from '@context/AuthProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useGigStore } from '@store/useGigStore';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useNavigation } from '@react-navigation/native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Users, ChevronRight, Briefcase, Activity, Plus } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 export default function ClientManageGigsScreen() {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
     const { showToast } = useAura();
-    const [gigs, setGigs] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+    const { myGigs, loading, fetchMyGigs } = useGigStore();
     const [refreshing, setRefreshing] = useState(false);
 
-    const fetchMyGigs = useCallback(async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data, error } = await supabase
-                .from('gigs')
-                .select('*, applications(count)')
-                .eq('client_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            if (data) setGigs(data);
-        } catch (error: any) {
-            console.error('[ManageGigs] Fetch Error:', error);
-            showToast({ message: "Registry Sync Failure", type: 'error' });
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    }, [showToast]);
-
     useEffect(() => {
-        fetchMyGigs();
+        if (user) {
+            fetchMyGigs(user.id);
 
-        const channel = supabase.channel('client-gigs-realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'gigs' }, () => fetchMyGigs())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, () => {
-                fetchMyGigs();
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            })
-            .subscribe();
+            const channel = supabase.channel(`client-gigs-${user.id}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'gigs', filter: `client_id=eq.${user.id}` }, () => fetchMyGigs(user.id))
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'applications' }, () => {
+                    fetchMyGigs(user.id);
+                    haptics.success();
+                })
+                .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
-    }, [fetchMyGigs]);
+            return () => { supabase.removeChannel(channel); };
+        }
+    }, [user, fetchMyGigs]);
 
-    const onRefresh = () => {
+    const onRefresh = async () => {
+        if (!user) return;
         setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        fetchMyGigs();
+        haptics.medium();
+        await fetchMyGigs(user.id);
+        setRefreshing(false);
     };
 
     const renderGigItem = ({ item, index }: { item: any; index: number }) => {
@@ -70,7 +68,7 @@ export default function ClientManageGigsScreen() {
                 <TouchableOpacity
                     style={styles.gigCard}
                     onPress={() => {
-                        Haptics.selectionAsync();
+                        haptics.selection();
                         navigation.navigate('GigManager', { gigId: item.id });
                     }}
                     activeOpacity={0.7}
@@ -127,7 +125,7 @@ export default function ClientManageGigsScreen() {
             />
 
             <FlatList
-                data={gigs}
+                data={myGigs}
                 renderItem={renderGigItem}
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContent}

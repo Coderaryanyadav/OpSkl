@@ -1,21 +1,24 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '../../../core/theme/aura';
+import { supabase } from '@api/supabase';
+import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
 import { CheckCircle, XCircle, MessageSquare, Target, Star } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraAvatar } from '../../../core/components/AuraAvatar';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { useAura } from '../../../core/context/AuraProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraText } from '@core/components/AuraText';
+import { AuraAvatar } from '@core/components/AuraAvatar';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
 
 export default function GigManagerScreen() {
     const route = useRoute();
     const navigation = useNavigation<any>();
     const { showDialog, showToast } = useAura();
+    const { user } = useAuth();
+    const haptics = useAuraHaptics();
     const { gigId } = route.params as { gigId: string };
 
     const [applicants, setApplicants] = useState<any[]>([]);
@@ -51,7 +54,7 @@ export default function GigManagerScreen() {
     }, [gigId, fetchGigDetails, fetchApplicants]);
 
     const handleDecision = async (applicationId: string, decision: 'accepted' | 'rejected') => {
-        Haptics.impactAsync(decision === 'accepted' ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium);
+        decision === 'accepted' ? haptics.heavy() : haptics.medium();
 
         if (decision === 'accepted') {
             showDialog({
@@ -75,16 +78,29 @@ export default function GigManagerScreen() {
         if (!error) {
             if (decision === 'accepted') {
                 const workerId = applicants.find(a => a.id === applicationId)?.worker_id;
+
+                // Update gig status and assign worker
                 await supabase.from('gigs').update({
                     assigned_worker_id: workerId,
                     status: 'active'
                 }).eq('id', gigId);
 
+                // Create escrow transaction
+                if (gigDetails && workerId && user) {
+                    await supabase.from('escrow_transactions').insert({
+                        gig_id: gigId,
+                        client_id: user.id,
+                        worker_id: workerId,
+                        amount_cents: gigDetails.pay_amount_cents || (gigDetails.budget * 100),
+                        status: 'held'
+                    });
+                }
+
                 // Create/Access Chat Room
                 await supabase.from('chat_rooms').upsert({ gig_id: gigId, type: 'assignment' });
 
                 showToast({ message: "Personnel Deployed Successfully", type: 'success' });
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                haptics.success();
             } else {
                 showToast({ message: "Application Declined", type: 'info' });
             }

@@ -1,43 +1,47 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, RefreshControl, ScrollView } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '../../../core/theme/aura';
-import { AuraHeader } from '../../../core/components/AuraHeader';
+import { supabase } from '@api/supabase';
+import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
+import { AuraHeader } from '@core/components/AuraHeader';
 import GigCard from '../components/GigCard';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraLoader } from '../../../core/components/AuraLoader';
-import { AuraMotion } from '../../../core/components/AuraMotion';
+import { AuraText } from '@core/components/AuraText';
+import { AuraLoader } from '@core/components/AuraLoader';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAuth } from '@context/AuthProvider';
 import { Zap, CheckCircle, Activity, ShieldCheck } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { Gig, ApplicationStatus } from '@features/gig-discovery/types';
 
 export default function WorkerMyGigsScreen() {
-    const [activeGigs, setActiveGigs] = useState<any[]>([]);
-    const [pendingGigs, setPendingGigs] = useState<any[]>([]);
-    const [pastGigs, setPastGigs] = useState<any[]>([]);
+    const haptics = useAuraHaptics();
+    const { user } = useAuth();
+    const [activeGigs, setActiveGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
+    const [pendingGigs, setPendingGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
+    const [pastGigs, setPastGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
     const fetchMyGigs = useCallback(async () => {
+        if (!user) return;
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
             const { data: applications, error } = await supabase
                 .from('applications')
                 .select('*, gigs(*)')
                 .eq('worker_id', user.id)
-                .in('status', ['pending', 'accepted', 'completed'])
+                .in('status', ['pending', 'accepted', 'completed', 'approved'])
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            const active: any[] = [];
-            const pending: any[] = [];
-            const past: any[] = [];
+            const active: (Gig & { application_status: ApplicationStatus })[] = [];
+            const pending: (Gig & { application_status: ApplicationStatus })[] = [];
+            const past: (Gig & { application_status: ApplicationStatus })[] = [];
 
             applications?.forEach(app => {
-                const gigWithStatus = { ...app.gigs, application_status: app.status };
-                if (app.status === 'accepted') {
+                if (!app.gigs) return;
+                const gigWithStatus = { ...app.gigs, application_status: app.status } as Gig & { application_status: ApplicationStatus };
+                // 'approved' or 'accepted' -> active
+                if (app.status === 'accepted' || app.status === 'approved') {
                     active.push(gigWithStatus);
                 } else if (app.status === 'pending') {
                     pending.push(gigWithStatus);
@@ -56,25 +60,28 @@ export default function WorkerMyGigsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
         fetchMyGigs();
 
-        const channel = supabase.channel('my-gigs-realtime')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'applications'
-            }, () => fetchMyGigs())
-            .subscribe();
+        if (user) {
+            const channel = supabase.channel(`worker-gigs-${user.id}`)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'applications',
+                    filter: `worker_id=eq.${user.id}`
+                }, () => fetchMyGigs())
+                .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
-    }, [fetchMyGigs]);
+            return () => { supabase.removeChannel(channel); };
+        }
+    }, [fetchMyGigs, user]);
 
     const onRefresh = () => {
         setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptics.medium();
         fetchMyGigs();
     };
 

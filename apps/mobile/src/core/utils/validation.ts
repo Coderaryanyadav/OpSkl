@@ -1,3 +1,8 @@
+/**
+ * 🛠️ CORE VALIDATION ENGINE
+ * Typed validation logic for complex domain logic.
+ */
+
 // Email validation
 export const validateEmail = (email: string): boolean => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,7 +26,6 @@ export const validateUrl = (url: string): boolean => {
         const _url = new URL(url);
         return true;
     } catch {
-        // Fallback regex for simpler environments
         return /^(http|https):\/\/[^ "]+$/.test(url);
     }
 };

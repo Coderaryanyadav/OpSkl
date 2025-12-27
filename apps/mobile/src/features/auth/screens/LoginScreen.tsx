@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraInput } from '../../../core/components/AuraInput';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '../../../core/theme/aura';
+import { supabase } from '@api/supabase';
+import { AuraText } from '@core/components/AuraText';
+import { AuraInput } from '@core/components/AuraInput';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
 import { ArrowRight } from 'lucide-react-native';
-import { checkRateLimit, secureLog } from '../../../core/utils/security';
-import { validateEmail } from '../../../utils/validation';
+import { checkRateLimit, secureLog } from '@core/utils/security';
+import { validateEmail } from '@core/utils/validation';
 import * as Device from 'expo-device';
+import { useAura } from '@core/context/AuraProvider';
 
 export default function LoginScreen() {
     const navigation = useNavigation<any>();
+    const { showDialog } = useAura();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -21,9 +23,15 @@ export default function LoginScreen() {
     async function handleLogin() {
         setErrorMsg(null);
 
-        if (!checkRateLimit('login_attempt', 5, 60000)) {
-            const msg = 'Too Many Attempts. Please wait a minute before trying again.';
-            Alert.alert('Too Many Attempts', msg);
+        const isAllowed = await checkRateLimit('login_attempt', 5, 60000);
+        if (!isAllowed) {
+            const msg = 'Security Protocol: Too Many Attempts. Please wait 60 seconds.';
+            showDialog({
+                title: 'Access Restricted',
+                message: msg,
+                type: 'warning',
+                onConfirm: () => { }
+            });
             setErrorMsg(msg);
             return;
         }

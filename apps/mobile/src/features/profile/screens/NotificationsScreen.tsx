@@ -1,27 +1,40 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraLoader } from '../../../core/components/AuraLoader';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
-import { AuraMotion } from '../../../core/components/AuraMotion';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { supabase } from '@api/supabase';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraText } from '@core/components/AuraText';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraLoader } from '@core/components/AuraLoader';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Bell, Briefcase, Star, DollarSign, ShieldAlert } from 'lucide-react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import dayjs from 'dayjs';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useAuth } from '@context/AuthProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 dayjs.extend(relativeTime);
 
 export default function NotificationsScreen() {
+    const haptics = useAuraHaptics();
+    const { user } = useAuth();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
     const fetchNotifications = useCallback(async () => {
+        if (!user) return;
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
 
             const { data } = await supabase
                 .from('notifications')
@@ -52,14 +65,14 @@ export default function NotificationsScreen() {
     }, [fetchNotifications]);
 
     const markAsRead = async (id: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.light();
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
         await supabase.from('notifications').update({ read: true }).eq('id', id);
     };
 
     const onRefresh = () => {
         setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.light();
         fetchNotifications();
     };
 

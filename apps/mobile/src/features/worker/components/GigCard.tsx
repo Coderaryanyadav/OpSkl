@@ -1,26 +1,22 @@
 import React, { memo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AuraColors } from '../../../core/theme/aura';
-import { AuraText } from '../../../core/components/AuraText';
+import { useNavigation } from '@react-navigation/native';
+import { AuraColors } from '@theme/aura';
+import { AuraText } from '@core/components/AuraText';
 import { MapPin, Clock, Zap, Info } from 'lucide-react-native';
+import { Gig } from '@types';
 
 const { width } = Dimensions.get('window');
 
 interface GigCardProps {
-    gig: {
-        id: string;
-        title: string;
-        description: string;
-        pay_amount_cents: number;
-        duration_minutes: number;
-        urgency_level: 'low' | 'medium' | 'high';
-        category: string;
-    };
+    gig: Gig;
+    onPress?: () => void;
 }
 
-const GigCard: React.FC<GigCardProps> = ({ gig }) => {
-    const payAmount = (gig.pay_amount_cents / 100).toLocaleString();
+const GigCard: React.FC<GigCardProps> = ({ gig, onPress }) => {
+    const navigation = useNavigation<any>();
+    const payAmount = ((gig.pay_amount_cents || gig.budget * 100) / 100).toLocaleString();
 
     const getUrgencyProfile = () => {
         switch (gig.urgency_level) {
@@ -32,8 +28,21 @@ const GigCard: React.FC<GigCardProps> = ({ gig }) => {
 
     const status = getUrgencyProfile();
 
+    const handlePress = () => {
+        if (onPress) {
+            onPress();
+        } else if (gig.status === 'active' && gig.assigned_worker_id) {
+            navigation.navigate('GigDetails', { gigId: gig.id });
+        }
+    };
+
     return (
-        <View style={styles.outerContainer}>
+        <TouchableOpacity
+            style={styles.outerContainer}
+            onPress={handlePress}
+            activeOpacity={0.9}
+            disabled={!onPress && gig.status !== 'active'}
+        >
             <LinearGradient
                 colors={['#1C1C1E', '#000000']}
                 style={styles.container}
@@ -89,7 +98,7 @@ const GigCard: React.FC<GigCardProps> = ({ gig }) => {
                     </View>
                 </View>
             </LinearGradient>
-        </View>
+        </TouchableOpacity>
     );
 };
 

@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraMotion } from '../../../core/components/AuraMotion';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { supabase } from '@api/supabase';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraMotion } from '@core/components/AuraMotion';
 import { CheckCircle, AlertCircle, ScanLine, ShieldCheck } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
 
 export default function VerificationScreen() {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
+    const { user } = useAuth();
+    const { showDialog, showToast } = useAura();
     const [idFront, setIdFront] = useState<string | null>(null);
     const [idBack, setIdBack] = useState<string | null>(null);
     const [selfie, setSelfie] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
 
     const pickImage = async (setter: (uri: string) => void) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.light();
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
@@ -33,16 +38,15 @@ export default function VerificationScreen() {
 
     const handleSubmit = async () => {
         if (!idFront || !idBack || !selfie) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("Clearance Failed", "All 3 identity scans are required for security protocols.");
+            haptics.error();
+            showToast({ message: "Parameters incomplete. All 3 scans required.", type: 'error' });
             return;
         }
 
         setUploading(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        haptics.heavy();
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No active session detected.");
 
             const { error } = await supabase.from('profiles').update({
@@ -54,14 +58,15 @@ export default function VerificationScreen() {
 
             if (error) throw error;
 
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert(
-                "Dossier Transmitted",
-                "Your identity documents have been encrypted and queued for manual compliance audit. Completion expected: 12-24h.",
-                [{ text: "TERMINATE CONSOLE", onPress: () => navigation.goBack() }]
-            );
+            haptics.success();
+            showDialog({
+                title: 'Verification Submitted',
+                message: "Your identity documents have been encrypted and queued for manual compliance audit. Completion expected: 12-24h.",
+                primaryLabel: 'CLOSE',
+                onConfirm: () => navigation.goBack()
+            });
         } catch (e: any) {
-            Alert.alert("Sync Error", e.message);
+            showToast({ message: e.message, type: 'error' });
         } finally {
             setUploading(false);
         }
@@ -106,7 +111,7 @@ export default function VerificationScreen() {
 
     return (
         <View style={styles.container}>
-            <AuraHeader title="Identity Clearance" showBack />
+            <AuraHeader title="Identity Verification" showBack />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 <AuraMotion type="zoom" style={styles.headerInfo}>
@@ -120,16 +125,16 @@ export default function VerificationScreen() {
                 </AuraMotion>
 
                 <View style={styles.sectionHeader}>
-                    <AuraText variant="label" color={AuraColors.gray600} style={{ fontWeight: '900', letterSpacing: 2 }}>PHASE 1: CREDENTIALS</AuraText>
+                    <AuraText variant="label" color={AuraColors.gray600} style={{ fontWeight: '900', letterSpacing: 2 }}>PHASE 1: I.D. UPLOAD</AuraText>
                 </View>
 
                 <View style={styles.row}>
                     <View style={{ flex: 1 }}>
-                        <UploadCard label="CREDENTIAL FRONT" value={idFront} setter={setIdFront} delay={200} />
+                        <UploadCard label="ID CARD FRONT" value={idFront} setter={setIdFront} delay={200} />
                     </View>
                     <View style={{ width: 16 }} />
                     <View style={{ flex: 1 }}>
-                        <UploadCard label="CREDENTIAL BACK" value={idBack} setter={setIdBack} delay={300} />
+                        <UploadCard label="ID CARD BACK" value={idBack} setter={setIdBack} delay={300} />
                     </View>
                 </View>
 

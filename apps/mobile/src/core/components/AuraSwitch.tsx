@@ -1,8 +1,11 @@
 import React from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { StyleSheet, TouchableOpacity } from 'react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolateColor } from 'react-native-reanimated';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraShadows } from '../theme/aura';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 interface AuraSwitchProps {
     value: boolean;
@@ -22,8 +25,9 @@ export const AuraSwitch: React.FC<AuraSwitchProps> = ({
     const thumbSize = dimensions.h - (dimensions.p * 2);
 
     const handlePress = () => {
+    const haptics = useAuraHaptics();
         if (disabled) return;
-        Haptics.selectionAsync();
+        haptics.selection();
         const newValue = !value;
         offset.value = withSpring(newValue ? 1 : 0);
         onValueChange(newValue);

@@ -1,11 +1,19 @@
 import React, { useRef, useState } from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, Dimensions, FlatList, TouchableOpacity, ImageBackground } from 'react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useNavigation } from '@react-navigation/native';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraColors, AuraSpacing } from '../../../core/theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraText } from '@core/components/AuraText';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraButton } from '@core/components/AuraButton';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraColors, AuraSpacing } from '@theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -31,11 +39,13 @@ const SLIDES = [
 ];
 
 export default function OnboardingScreen({ onFinish }: { onFinish?: () => void }) {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
 
     const handleNext = () => {
+        haptics.medium();
         if (currentIndex < SLIDES.length - 1) {
             flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
             setCurrentIndex(prev => prev + 1);

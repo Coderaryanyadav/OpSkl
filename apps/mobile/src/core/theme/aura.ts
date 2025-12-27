@@ -1,90 +1,89 @@
 import { ViewStyle, TextStyle } from 'react-native';
 
 /**
- * 🎨 AURA DESIGN SYSTEM v2.0
- * Concept: High-Contrast Minimalist (Pure Black/White)
- * Focus: Accessibility, Performance (OLED Black), and Consistency.
+ * 🎨 AURA DESIGN SYSTEM v2.5 (Industrial Edition)
+ * Pure Black/White cyberpunk aesthetic with high-fidelity tokens.
  */
 
 export const AuraColors = {
-    // Brand (Cyber-Premium)
-    primary: '#007AFF',    // iOS Blue
-    secondary: '#5856D6',  // iOS Purple
-    accent: '#32ADE6',     // Light Blue
-    brand: '#FFFFFF',
+    // Brand (OLED Optimized)
+    primary: '#FFFFFF',
+    secondary: '#E0E0E0',
+    accent: '#007AFF', // iOS Blue for actions
+    textSecondary: '#8E8E93', // Alias for gray400
 
-    // Backgrounds (OLED Optimized)
+    // Backgrounds
     background: '#000000',
     surface: '#0A0A0A',
     surfaceElevated: '#121212',
     surfaceLight: '#1C1C1E',
     surfaceLighter: '#2C2C2E',
-    
+    overlay: 'rgba(0,0,0,0.92)',
+
     // Functional
-    success: '#34C759', // iOS Green
-    warning: '#FF9F0A', // iOS Orange
-    error: '#FF3B30',   // iOS Red
-    info: '#0A84FF',    // iOS Blue
-    
-    // Grayscale
+    success: '#34C759', 
+    warning: '#FF9F0A', 
+    error: '#FF3B30',   
+    info: '#0A84FF',    
+
+    // Grayscale (Full Spectrum)
     white: '#FFFFFF',
     black: '#000000',
     gray100: '#D1D1D6',
     gray200: '#C7C7CC',
     gray300: '#AEAEB2',
-    gray400: '#8E8E93',
+    gray400: '#A1A1A6', // Lightened from 8E8E93 for better contrast
     gray500: '#636366',
     gray600: '#48484A',
     gray700: '#3A3A3C',
     gray800: '#2C2C2E',
     gray900: '#1C1C1E',
 
-    // Glass & Transparency
+    // Glass
     glass: 'rgba(255, 255, 255, 0.08)',
     glassBorder: 'rgba(255, 255, 255, 0.15)',
-    overlay: 'rgba(0,0,0,0.92)',
 };
 
 export const AuraTypography: { [key: string]: TextStyle } = {
     h1: {
         fontSize: 34,
         fontWeight: '800',
-        color: AuraColors.white,
+        color: '#FFFFFF',
         letterSpacing: -0.5,
         lineHeight: 41,
     },
     h2: {
         fontSize: 28,
         fontWeight: '700',
-        color: AuraColors.white,
+        color: '#FFFFFF',
         letterSpacing: -0.4,
         lineHeight: 34,
     },
     h3: {
         fontSize: 22,
         fontWeight: '700',
-        color: AuraColors.white,
+        color: '#FFFFFF',
         letterSpacing: -0.3,
         lineHeight: 28,
     },
     bodyLarge: {
         fontSize: 19,
         fontWeight: '400',
-        color: AuraColors.white,
+        color: '#FFFFFF',
         letterSpacing: -0.2,
         lineHeight: 24,
     },
     body: {
         fontSize: 17,
         fontWeight: '400',
-        color: AuraColors.white,
+        color: '#FFFFFF',
         letterSpacing: -0.4,
         lineHeight: 22,
     },
     bodyBold: {
         fontSize: 17,
         fontWeight: '600',
-        color: AuraColors.white,
+        color: '#FFFFFF',
         letterSpacing: -0.4,
         lineHeight: 22,
     },
@@ -122,11 +121,11 @@ export const AuraSpacing = {
 };
 
 export const AuraGradients = {
-    primary: [AuraColors.primary, AuraColors.secondary] as readonly [string, string, ...string[]],
+    primary: [AuraColors.white, AuraColors.gray200] as readonly [string, string, ...string[]],
     surface: [AuraColors.surfaceElevated, AuraColors.surface] as readonly [string, string, ...string[]],
+    dark: ['#1C1C1E', '#000000'] as readonly [string, string, ...string[]],
     glass: ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.02)'] as readonly [string, string, ...string[]],
     gold: ['#FFE1A8', '#E2A233'] as readonly [string, string, ...string[]],
-    error: ['#FF5E5E', '#FF3B30'] as readonly [string, string, ...string[]],
 };
 
 export const AuraShadows = {
@@ -149,11 +148,29 @@ export const AuraShadows = {
 export const AuraBorderRadius = {
     none: 0,
     s: 8,
+    sm: 8,
     m: 12,
+    md: 12,
     l: 18,
+    lg: 18,
     xl: 24,
     xxl: 32,
     full: 9999,
+};
+
+export const AuraGlass = {
+    card: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)',
+    },
+    cardLight: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        backdropFilter: 'blur(10px)',
+    },
 };
 
 export const AuraAnimations = {

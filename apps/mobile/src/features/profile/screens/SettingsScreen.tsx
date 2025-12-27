@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { AuraColors, AuraSpacing, AuraShadows } from '../../../core/theme/aura';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraListItem } from '../../../core/components/AuraListItem';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraButton } from '../../../core/components/AuraButton';
-import { AuraMotion } from '../../../core/components/AuraMotion';
+import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
+import { AuraText } from '@core/components/AuraText';
+import { AuraListItem } from '@core/components/AuraListItem';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraButton } from '@core/components/AuraButton';
+import { AuraMotion } from '@core/components/AuraMotion';
 import { Bell, Shield, Lock, FileText, HelpCircle, ChevronRight, LogOut, Smartphone } from 'lucide-react-native';
-import { supabase } from '../../../core/api/supabase';
-import { useAura } from '../../../core/context/AuraProvider';
+import { supabase } from '@api/supabase';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Switch } from 'react-native'; // Standard switch for better control in this list
-import * as Haptics from 'expo-haptics';
 
 export default function SettingsScreen() {
     const navigation = useNavigation<any>();
     const { showDialog, showToast } = useAura();
+    const haptics = useAuraHaptics();
 
     const [pushEnabled, setPushEnabled] = useState(true);
     const [biometrics, setBiometrics] = useState(true);
@@ -23,13 +24,13 @@ export default function SettingsScreen() {
     const [publicSearch, setPublicSearch] = useState(true);
 
     const handleLogout = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        haptics.warning();
         showDialog({
             title: 'Terminate Session',
             message: 'Are you sure you want to end your secure deployment?',
             type: 'warning',
             onConfirm: async () => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                haptics.heavy();
                 const { error } = await supabase.auth.signOut();
                 if (error) {
                     showToast({ message: error.message, type: 'error' });
@@ -54,7 +55,7 @@ export default function SettingsScreen() {
                             rightElement={
                                 <Switch
                                     value={biometrics}
-                                    onValueChange={(val) => { setBiometrics(val); Haptics.selectionAsync(); }}
+                                    onValueChange={(val) => { setBiometrics(val); haptics.selection(); }}
                                     trackColor={{ false: AuraColors.gray200, true: AuraColors.white }}
                                     thumbColor={biometrics ? AuraColors.black : AuraColors.gray600}
                                 />
@@ -68,7 +69,7 @@ export default function SettingsScreen() {
                             rightElement={
                                 <Switch
                                     value={ghostMode}
-                                    onValueChange={(val) => { setGhostMode(val); Haptics.selectionAsync(); }}
+                                    onValueChange={(val) => { setGhostMode(val); haptics.selection(); }}
                                     trackColor={{ false: AuraColors.gray200, true: AuraColors.white }}
                                     thumbColor={ghostMode ? AuraColors.black : AuraColors.gray600}
                                 />
@@ -88,11 +89,18 @@ export default function SettingsScreen() {
                             rightElement={
                                 <Switch
                                     value={pushEnabled}
-                                    onValueChange={(val) => { setPushEnabled(val); Haptics.selectionAsync(); }}
+                                    onValueChange={(val) => { setPushEnabled(val); haptics.selection(); }}
                                     trackColor={{ false: AuraColors.gray200, true: AuraColors.white }}
                                     thumbColor={pushEnabled ? AuraColors.black : AuraColors.gray600}
                                 />
                             }
+                        />
+                        <View style={styles.divider} />
+                        <AuraListItem
+                            title="Notification Preferences"
+                            subtitle="Customize alerts matrix"
+                            leftIcon={<Bell size={20} color={AuraColors.white} />}
+                            onPress={() => navigation.navigate('NotificationPreferences')}
                         />
                         <View style={styles.divider} />
                         <AuraListItem
@@ -102,7 +110,7 @@ export default function SettingsScreen() {
                             rightElement={
                                 <Switch
                                     value={publicSearch}
-                                    onValueChange={(val) => { setPublicSearch(val); Haptics.selectionAsync(); }}
+                                    onValueChange={(val) => { setPublicSearch(val); haptics.selection(); }}
                                     trackColor={{ false: AuraColors.gray200, true: AuraColors.white }}
                                     thumbColor={publicSearch ? AuraColors.black : AuraColors.gray600}
                                 />
@@ -118,14 +126,14 @@ export default function SettingsScreen() {
                         <AuraListItem
                             title="Mission Support"
                             leftIcon={<HelpCircle size={20} color={AuraColors.white} />}
-                            onPress={() => { Haptics.selectionAsync(); Linking.openURL('https://support.aura.app'); }}
+                            onPress={() => { haptics.selection(); Linking.openURL('https://support.aura.app'); }}
                             rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
                         />
                         <View style={styles.divider} />
                         <AuraListItem
                             title="Operational Terms"
                             leftIcon={<FileText size={20} color={AuraColors.white} />}
-                            onPress={() => { Haptics.selectionAsync(); navigation.navigate('PrivacyPolicy'); }}
+                            onPress={() => { haptics.selection(); navigation.navigate('PrivacyPolicy'); }}
                             rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
                         />
                     </View>

@@ -1,22 +1,25 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraAvatar } from '../../../core/components/AuraAvatar';
-import { SkeletonLoader } from '../../../core/components/SkeletonLoader';
-import { AuraColors, AuraSpacing, AuraBorderRadius } from '../../../core/theme/aura';
-import { AuraMotion } from '../../../core/components/AuraMotion';
+import { supabase } from '@api/supabase';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { AuraText } from '@core/components/AuraText';
+import { AuraAvatar } from '@core/components/AuraAvatar';
+import { SkeletonLoader } from '@core/components/SkeletonLoader';
+import { AuraColors, AuraSpacing, AuraBorderRadius } from '@theme/aura';
+import { AuraMotion } from '@core/components/AuraMotion';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { MessageSquare, Search, ShieldCheck } from 'lucide-react-native';
-import { AuraInput } from '../../../core/components/AuraInput';
-import * as Haptics from 'expo-haptics';
+import { AuraInput } from '@core/components/AuraInput';
+import { useAuth } from '@context/AuthProvider';
 
 dayjs.extend(relativeTime);
 
 const ChatListItem = React.memo(({ item, index, onPress }: { item: any; index: number; onPress: (item: any) => void }) => {
+    const haptics = useAuraHaptics();
     const lastMsg = item.messages?.[0];
     const otherParticipant = item.participants?.[0]?.profiles;
 
@@ -25,7 +28,7 @@ const ChatListItem = React.memo(({ item, index, onPress }: { item: any; index: n
             <TouchableOpacity
                 style={styles.chatItem}
                 onPress={() => {
-                    Haptics.selectionAsync();
+                    haptics.selection();
                     onPress(item);
                 }}
                 activeOpacity={0.7}
@@ -62,17 +65,17 @@ const ChatListItem = React.memo(({ item, index, onPress }: { item: any; index: n
 });
 
 export default function MessageListScreen() {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
+    const { user } = useAuth();
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchRooms = useCallback(async () => {
+        if (!user) return;
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
             const { data: participationData } = await supabase
                 .from('chat_participants')
                 .select('room_id')
@@ -143,7 +146,6 @@ export default function MessageListScreen() {
 
     const onRefresh = () => {
         setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         fetchRooms();
     };
 
@@ -171,6 +173,12 @@ export default function MessageListScreen() {
         );
     }
 
+    const renderItem = useCallback(({ item, index }: { item: any; index: number }) => (
+        <ChatListItem item={item} index={index} onPress={handlePress} />
+    ), [handlePress]);
+
+    const keyExtractor = useCallback((item: any) => item.id, []);
+
     return (
         <View style={styles.container}>
             <AuraHeader title="Secure Comms" showBack={false} />
@@ -185,11 +193,12 @@ export default function MessageListScreen() {
                 />
             </View>
 
-            <FlatList
+            <FlashList
                 data={filteredRooms}
-                renderItem={({ item, index }) => <ChatListItem item={item} index={index} onPress={handlePress} />}
-                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                keyExtractor={keyExtractor}
                 contentContainerStyle={styles.list}
+                estimatedItemSize={88}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={AuraColors.primary} />
                 }

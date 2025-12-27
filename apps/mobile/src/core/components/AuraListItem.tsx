@@ -1,11 +1,17 @@
 import React from 'react';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import Animated, { Layout, SlideInRight, SlideOutRight } from 'react-native-reanimated';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraSpacing } from '../theme/aura';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from './AuraText';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { ChevronRight, Trash2, Archive } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 interface AuraListItemProps {
     title: string;
@@ -32,13 +38,14 @@ export const AuraListItem: React.FC<AuraListItemProps> = ({
 }) => {
 
     const renderRightActions = (_progress: any, _dragX: any) => {
+    const haptics = useAuraHaptics();
         return (
             <View style={styles.rightActions}>
                 {onArchive && (
                     <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: AuraColors.warning }]}
                         onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            haptics.medium();
                             onArchive();
                         }}
                     >
@@ -49,7 +56,7 @@ export const AuraListItem: React.FC<AuraListItemProps> = ({
                     <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: AuraColors.error }]}
                         onPress={() => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                            haptics.warning();
                             onDelete();
                         }}
                     >
@@ -70,7 +77,7 @@ export const AuraListItem: React.FC<AuraListItemProps> = ({
                 <TouchableOpacity
                     activeOpacity={0.7}
                     onPress={() => {
-                        Haptics.selectionAsync();
+                        haptics.selection();
                         onPress?.();
                     }}
                     style={styles.container}

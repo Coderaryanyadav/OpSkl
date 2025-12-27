@@ -6,7 +6,7 @@ import { AuraColors, AuraSpacing } from '../theme/aura';
 import { AuraText } from './AuraText';
 import { ChevronLeft } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
+import { useAuraHaptics } from '../hooks/useAuraHaptics';
 
 interface AuraHeaderProps {
     title: string;
@@ -15,6 +15,7 @@ interface AuraHeaderProps {
     rightElement?: React.ReactNode;
     transparent?: boolean;
     style?: ViewStyle;
+    action?: { icon: React.ReactNode; onPress: () => void; };
 }
 
 export const AuraHeader: React.FC<AuraHeaderProps> = ({
@@ -23,13 +24,14 @@ export const AuraHeader: React.FC<AuraHeaderProps> = ({
     onBack,
     rightElement,
     transparent = false,
-    style
+    style,
+    action
 }) => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const haptics = useAuraHaptics();
 
     const handleBack = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (onBack) onBack();
         else navigation.goBack();
     };
@@ -51,7 +53,13 @@ export const AuraHeader: React.FC<AuraHeaderProps> = ({
             </View>
 
             <View style={styles.right}>
-                {rightElement || <View style={{ width: 40 }} />}
+                {action ? (
+                    <TouchableOpacity onPress={action.onPress} style={styles.backBtn} activeOpacity={0.7}>
+                        {action.icon}
+                    </TouchableOpacity>
+                ) : (
+                    rightElement || <View style={{ width: 40 }} />
+                )}
             </View>
         </View>
     );

@@ -1,73 +1,83 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Dimensions, RefreshControl } from 'react-native';
-import { supabase } from '../../../core/api/supabase';
-import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '../../../core/theme/aura';
-import { AuraText } from '../../../core/components/AuraText';
-import { AuraAvatar } from '../../../core/components/AuraAvatar';
-import { AuraBadge } from '../../../core/components/AuraBadge';
-import { AuraMotion } from '../../../core/components/AuraMotion';
-import { AuraLoader } from '../../../core/components/AuraLoader';
-import { AuraHeader } from '../../../core/components/AuraHeader';
-import { useAura } from '../../../core/context/AuraProvider';
-import * as Haptics from 'expo-haptics';
+import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Dimensions, RefreshControl, ActivityIndicator } from 'react-native';
+import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { supabase } from '@api/supabase';
+import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
+import { AuraText } from '@core/components/AuraText';
+import { AuraAvatar } from '@core/components/AuraAvatar';
+import { AuraBadge } from '@core/components/AuraBadge';
+import { AuraMotion } from '@core/components/AuraMotion';
+import { AuraLoader } from '@core/components/AuraLoader';
+import { AuraHeader } from '@core/components/AuraHeader';
+import { useAura } from '@core/context/AuraProvider';
+import { useAuth } from '@context/AuthProvider';
+import { useUserStore } from '@store/useUserStore';
 import { useNavigation } from '@react-navigation/native';
-import { Settings, Zap, Shield, Wallet, Crown, LogOut, ChevronRight, Verified } from 'lucide-react-native';
+import { Settings, Zap, Shield, Wallet, Crown, LogOut, ChevronRight, Verified, Repeat, Star, Briefcase, Plus } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
+    const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
-    const { xp, level, showDialog, showToast } = useAura();
-    const [profile, setProfile] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const { showDialog, showToast } = useAura();
+    const { xp, level } = useUserStore();
+    const { user, profile, loading: authLoading } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
     const [isGhostMode, setIsGhostMode] = useState(false);
+    const [switchingRole, setSwitchingRole] = useState(false);
 
     const nextLevelXp = level * 1000;
     const progress = (xp % 1000) / 1000;
 
-    const fetchProfile = useCallback(async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-            if (data) {
-                setProfile(data);
-                setIsGhostMode(data.is_ghost_mode || false);
-            }
-        } catch (e) {
-            console.error('[Profile] Fetch Error:', e);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    }, []);
-
     useEffect(() => {
-        fetchProfile();
-    }, [fetchProfile]);
+        if (profile) {
+            setIsGhostMode(profile.is_ghost_mode || false);
+        }
+    }, [profile]);
 
-    const onRefresh = () => {
+    const onRefresh = async () => {
         setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        fetchProfile();
+        haptics.medium();
+        // AuthProvider handles sync automatically on session check or we could expose a refresh method
+        setRefreshing(false);
+    };
+
+    const handleRoleSwitch = async () => {
+        if (!user || !profile) return;
+        const newRole = profile.active_role === 'client' ? 'talent' : 'client';
+        setSwitchingRole(true);
+        haptics.heavy();
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ active_role: newRole })
+                .eq('id', user.id);
+
+            if (error) throw error;
+            showToast({ message: `Switched to ${newRole.toUpperCase()} Mode`, type: 'success' });
+        } catch (e: any) {
+            showToast({ message: "Role Switch Failed", type: 'error' });
+        } finally {
+            setSwitchingRole(false);
+        }
     };
 
     const handleLogout = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        haptics.warning();
         showDialog({
             title: 'Terminate Session',
             message: 'Are you sure you want to end your secure deployment and logout?',
             type: 'warning',
             onConfirm: async () => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                haptics.heavy();
                 await supabase.auth.signOut();
             }
         });
     };
 
-    if (loading && !profile) {
+    if (authLoading && !profile) {
         return (
             <View style={styles.center}>
                 <AuraLoader size={60} />
@@ -131,12 +141,19 @@ export default function ProfileScreen() {
                     </View>
                     <View style={styles.hudDivider} />
                     <View style={styles.hudStat}>
-                        <AuraText variant="h2" color={AuraColors.success}>{profile?.trust_score || 98}</AuraText>
-                        <AuraText variant="label" color={AuraColors.gray500}>TRUST %</AuraText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <AuraText variant="h2" color={AuraColors.warning}>
+                                {profile?.avg_rating ? profile.avg_rating.toFixed(1) : '—'}
+                            </AuraText>
+                            <Star size={16} color={AuraColors.warning} fill={AuraColors.warning} />
+                        </View>
+                        <AuraText variant="label" color={AuraColors.gray500}>
+                            {profile?.review_count || 0} REVIEWS
+                        </AuraText>
                     </View>
                     <View style={styles.hudDivider} />
                     <View style={styles.hudStat}>
-                        <AuraText variant="h2" color={AuraColors.warning}>{profile?.current_streak || 0}</AuraText>
+                        <AuraText variant="h2" color={AuraColors.success}>{profile?.current_streak || 0}</AuraText>
                         <AuraText variant="label" color={AuraColors.gray500}>STREAK</AuraText>
                     </View>
                 </View>
@@ -166,6 +183,27 @@ export default function ProfileScreen() {
                         <ChevronRight size={18} color={AuraColors.gray700} />
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={styles.moduleItem}
+                        onPress={handleRoleSwitch}
+                        disabled={switchingRole}
+                    >
+                        <View style={styles.moduleLeft}>
+                            <View style={[styles.moduleIcon, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+                                {switchingRole ? (
+                                    <ActivityIndicator size="small" color={AuraColors.primary} />
+                                ) : (
+                                    <Repeat size={20} color={AuraColors.white} />
+                                )}
+                            </View>
+                            <View>
+                                <AuraText variant="bodyBold">Switch Interface</AuraText>
+                                <AuraText variant="caption" color={AuraColors.gray500}>Currently in {profile?.active_role} mode</AuraText>
+                            </View>
+                        </View>
+                        <ChevronRight size={18} color={AuraColors.gray700} />
+                    </TouchableOpacity>
+
                     <TouchableOpacity style={styles.moduleItem} onPress={() => navigation.navigate('Verification')}>
                         <View style={styles.moduleLeft}>
                             <View style={[styles.moduleIcon, { backgroundColor: 'rgba(0, 122, 255, 0.1)' }]}>
@@ -174,6 +212,16 @@ export default function ProfileScreen() {
                             <AuraText variant="bodyBold">Security & Identity</AuraText>
                         </View>
                         <AuraBadge label="ACTIVE" variant="success" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.moduleItem} onPress={() => navigation.navigate('PortfolioUpload')}>
+                        <View style={styles.moduleLeft}>
+                            <View style={[styles.moduleIcon, { backgroundColor: 'rgba(255, 45, 85, 0.1)' }]}>
+                                <Briefcase size={20} color={AuraColors.error} />
+                            </View>
+                            <AuraText variant="bodyBold">Portfolio Manager</AuraText>
+                        </View>
+                        <Plus size={18} color={AuraColors.gray700} />
                     </TouchableOpacity>
 
                     <View style={styles.moduleItem}>
@@ -190,7 +238,7 @@ export default function ProfileScreen() {
                             value={isGhostMode}
                             onValueChange={(val) => {
                                 setIsGhostMode(val);
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                haptics.light();
                                 showToast({ message: val ? 'Ghost Protocol Engaged' : 'Ghost Protocol Disengaged', type: 'info' });
                             }}
                             trackColor={{ false: AuraColors.gray800, true: AuraColors.primary }}
@@ -218,12 +266,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: AuraColors.background,
-    },
-    center: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
         backgroundColor: AuraColors.background,
     },
     content: {
@@ -356,5 +398,11 @@ const styles = StyleSheet.create({
         marginTop: 48,
         letterSpacing: 2,
         opacity: 0.5,
-    }
+    },
+    center: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: AuraColors.background,
+    },
 });

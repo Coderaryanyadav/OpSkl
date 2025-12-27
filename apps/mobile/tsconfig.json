@@ -12,6 +12,45 @@
         "paths": {
             "@/*": [
                 "./*"
+            ],
+            "@core/*": [
+                "core/*"
+            ],
+            "@features/*": [
+                "features/*"
+            ],
+            "@theme/*": [
+                "core/theme/*"
+            ],
+            "@utils/*": [
+                "core/utils/*"
+            ],
+            "@context/*": [
+                "core/context/*"
+            ],
+            "@services/*": [
+                "core/services/*"
+            ],
+            "@api/*": [
+                "core/api/*"
+            ],
+            "@i18n": [
+                "core/i18n/index.ts"
+            ],
+            "@i18n/*": [
+                "core/i18n/*"
+            ],
+            "@store/*": [
+                "core/store/*"
+            ],
+            "@types": [
+                "core/types/index.ts"
+            ],
+            "@types/*": [
+                "core/types/*"
+            ],
+            "@navigation/*": [
+                "core/navigation/*"
             ]
         },
         "jsx": "react-native"
