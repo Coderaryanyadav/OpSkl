@@ -4,10 +4,13 @@ type EventName =
     | 'APP_OPENED'
     | 'GIG_VIEWED'
     | 'GIG_APPLIED'
+    | 'GIG_SHARED'
+    | 'GIG_COMPLETED'
     | 'DISPUTE_INITIATED'
     | 'PROFILE_VIEWED'
     | 'SEARCH_PERFORMED'
-    | 'FILTER_USED';
+    | 'FILTER_USED'
+    | 'FUNDS_WITHDRAWN';
 
 export const Analytics = {
     track: async (event: EventName, properties: Record<string, any> = {}) => {

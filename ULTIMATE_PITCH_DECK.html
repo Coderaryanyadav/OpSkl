@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpSkl | Investor Pitch Deck 2025</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #121212;
+            --primary: #007AFF;
+            --secondary: #5856D6;
+            --accent: #00C6FF;
+            --text: #FFFFFF;
+            --text-dim: #A0A0A0;
+            --border: rgba(255, 255, 255, 0.1);
+            --gradient: linear-gradient(135deg, #007AFF 0%, #00C6FF 100%);
+            --glass: rgba(255, 255, 255, 0.03);
+            --glow: 0 0 40px rgba(0, 122, 255, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+        }
+
+        .deck-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        section {
+            height: 100vh;
+            width: 100%;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Background effects */
+        .bg-glow {
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        /* Navigation */
+        .nav-dots {
+            position: fixed;
+            right: 2.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .dot.active {
+            background: var(--primary);
+            transform: scale(1.8);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 6rem;
+            font-weight: 800;
+            letter-spacing: -3px;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            line-height: 0.9;
+        }
+
+        h2 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: var(--text-dim);
+            max-width: 800px;
+            text-align: center;
+            margin-bottom: 3rem;
+            font-weight: 300;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: var(--primary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Glass Cards */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            padding: 3rem;
+            border-radius: 32px;
+            transition: all 0.4s ease;
+        }
+
+        .glass-card:hover {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-5px);
+        }
+
+        /* Charts */
+        .chart-container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--glass);
+            padding: 3rem;
+            border-radius: 40px;
+            border: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .chart-label {
+            font-size: 12px;
+            fill: var(--text-dim);
+            font-family: 'JetBrains Mono';
+        }
+
+        .chart-axis {
+            stroke: var(--border);
+            stroke-width: 1;
+        }
+
+        .chart-line {
+            stroke: var(--primary);
+            stroke-width: 3;
+            fill: none;
+            stroke-linecap: round;
+        }
+
+        .chart-bar {
+            fill: var(--primary);
+            transition: all 0.3s;
+        }
+
+        .chart-bar:hover {
+            fill: var(--accent);
+        }
+
+        /* Images */
+        .mockup-img {
+            max-width: 1000px;
+            width: 90%;
+            border-radius: 40px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--border);
+        }
+
+        /* Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .deck-container section.active .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .delay-1 {
+            transition-delay: 0.1s;
+        }
+
+        .delay-2 {
+            transition-delay: 0.2s;
+        }
+
+        .delay-3 {
+            transition-delay: 0.3s;
+        }
+
+        /* Specific styles */
+        .stat-number {
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.8rem;
+        }
+
+        .team-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--gradient);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+
+        .tag {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 122, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-dots" id="navDots"></div>
+
+    <div class="deck-container" id="deck">
+
+        <!-- SLIDE 1: HERO -->
+        <section class="active">
+            <div class="bg-glow" style="top: -20%; left: -10%;"></div>
+            <p class="mono reveal">PRE-SEED | INVESTOR DECK 2025</p>
+            <h1 class="reveal delay-1">OpSkl.</h1>
+            <p class="subtitle reveal delay-2">The Opportunity Operating System</p>
+            <div class="glass-card reveal delay-3" style="padding: 1.5rem 3rem; border-radius: 100px;">
+                <p style="font-weight: 600;">Building the Future of Effortless Skilled Labor</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: VISION -->
+        <section>
+            <div class="bg-glow" style="bottom: -10%; right: -10%;"></div>
+            <p class="mono reveal">THE VISION</p>
+            <h2 class="reveal delay-1" style="max-width: 1000px;">To make finding an opportunity as effortless as
+                ordering a ride.</h2>
+            <p class="subtitle reveal delay-2">OpSkl is the first truly mobile-native, AI-first ecosystem for the global
+                gig economy.</p>
+        </section>
+
+        <!-- SLIDE 3: THE BIG OPPORTUNITY -->
+        <section>
+            <p class="mono reveal">MARKET SCALE</p>
+            <h2 class="reveal delay-1">A $1.8 Trillion Frontier</h2>
+            <div class="grid reveal delay-2">
+                <div class="glass-card">
+                    <p class="stat-number">$455B</p>
+                    <p class="stat-label">2023 Gig Market</p>
+                </div>
+                <div class="glass-card">
+                    <p class="stat-number">16.4%</p>
+                    <p class="stat-label">Expected CAGR</p>
+                </div>
+                <div class="glass-card">
+                    <p class="stat-number">40%</p>
+                    <p class="stat-label">Workforce Freelance by 2030</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: WHY NOW -->
+        <section>
+            <p class="mono reveal">THE INFLECTION POINT</p>
+            <h2 class="reveal delay-1">Why Now?</h2>
+            <div class="grid reveal delay-2">
+                <div class="glass-card">
+                    <h3>AI Maturity</h3>
+                    <p style="color: var(--text-dim);">Large Language Models (Gemini) now enable true semantic matching
+                        vs. keyword search.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Gen Z Shift</h3>
+                    <p style="color: var(--text-dim);">Digital natives reject legacy job boards. They demand
+                        mobile-native, high-frequency apps.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Trust Infrastructure</h3>
+                    <p style="color: var(--text-dim);">Web3 and decentralized identity make global trust scores a
+                        technical reality.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: PROBLEM OVERVIEW -->
+        <section>
+            <p class="mono reveal">THE PROBLEM</p>
+            <h2 class="reveal delay-1">Market Friction & Trust Deficit</h2>
+            <p class="subtitle reveal delay-2">The gap between "Skilled Labor" and "Immediate Opportunity" is currently
+                filled with friction.</p>
+        </section>
+
+        <!-- SLIDE 6: PROBLEM WORKERS -->
+        <section>
+            <p class="mono reveal">PAIN POINT: WORKERS</p>
+            <div class="grid reveal delay-1">
+                <div class="glass-card">
+                    <h3>Discovery Fatigue</h3>
+                    <p style="color: var(--text-dim); margin-top: 1rem;">Spending 40% of time "finding" work, not doing
+                        it.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>The Feedback Trap</h3>
+                    <p style="color: var(--text-dim); margin-top: 1rem;">No portable trust scores. Starting from zero on
+                        every platform.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Broken UX</h3>
+                    <p style="color: var(--text-dim); margin-top: 1rem;">Legacy apps that feel like 2012 web-wrappers.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: PROBLEM EMPLOYERS -->
+        <section>
+            <p class="mono reveal">PAIN POINT: EMPLOYERS</p>
+            <div class="grid reveal delay-1">
+                <div class="glass-card">
+                    <h3>Vetting Paralysis</h3>
+                    <p style="color: var(--text-dim); margin-top: 1rem;">Sifting through 100+ "garbage" applicants per
+                        listing.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Ghosting Risk</h3>
+                    <p style="color: var(--text-dim); margin-top: 1rem;">62% of gig workers ghost clients before
+                        completion.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Invoicing Hell</h3>
+                    <p style="color: var(--text-dim); margin-top: 1rem;">Burdensome administrative overhead for small
+                        tasks.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: CURRENT SOLUTIONS -->
+        <section>
+            <p class="mono reveal">LANDSCAPE</p>
+            <h2 class="reveal delay-1">Today's Fragmented Stack</h2>
+            <div class="grid reveal delay-2">
+                <div class="glass-card">
+                    <h3>Fiverr/Upwork</h3>
+                    <p style="color: var(--text-dim);">Global, high fees, desktop-first, bidding wars.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>WhatsApp Groups</h3>
+                    <p style="color: var(--text-dim);">Fast but zero trust, no escrow, no discovery.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Local Agencies</h3>
+                    <p style="color: var(--text-dim);">Deeply manual, slow, expensive, unscalable.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: WHY THEY FAIL -->
+        <section>
+            <h2 class="reveal">Why Legacy Fails</h2>
+            <p class="subtitle reveal delay-1">They focus on the <strong>Transaction</strong>. <br>We focus on the
+                <strong>Ecosystem of Trust</strong>.
+            </p>
+        </section>
+
+        <!-- SLIDE 10: OUR INSIGHT -->
+        <section>
+            <p class="mono reveal">THE INSIGHT</p>
+            <div class="glass-card reveal delay-1" style="max-width: 800px; text-align: center;">
+                <h2>"Trust is the ultimate lubricant for opportunity."</h2>
+                <p style="font-size: 1.2rem; color: var(--text-dim);">By commoditizing trust through AI and Escrow, we
+                    unlock a massive "Long Tail" of services that were previously too risky to hire for.</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 11: PRODUCT OVERVIEW -->
+        <section>
+            <p class="mono reveal">THE PRODUCT</p>
+            <h2 class="reveal delay-1">Meet OpSkl</h2>
+            <img src="https://images.unsplash.com/photo-1621330396173-e41b1cafd17f?auto=format&fit=crop&q=80&w=2670"
+                class="mockup-img reveal delay-2" alt="App Mockup">
+        </section>
+
+        <!-- SLIDE 12: CORE FEATURES -->
+        <section>
+            <p class="mono reveal">FEATURES</p>
+            <div class="grid reveal delay-1">
+                <div class="glass-card">
+                    <span class="tag">MOBILE NATIVE</span>
+                    <h3>Swipe Discovery</h3>
+                    <p style="color: var(--text-dim);">Instant matching for Gen Z attention spans.</p>
+                </div>
+                <div class="glass-card">
+                    <span class="tag">AI FIRST</span>
+                    <h3>Smart Match</h3>
+                    <p style="color: var(--text-dim);">Gemini-driven semantic search (intent over keywords).</p>
+                </div>
+                <div class="glass-card">
+                    <span class="tag">GAMIFIED</span>
+                    <h3>The Trust Score</h3>
+                    <p style="color: var(--text-dim);">XP and leveling system that builds portable reputation.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 13: UX PHILOSOPHY -->
+        <section>
+            <p class="mono reveal">AESTHETICS</p>
+            <h2 class="reveal delay-1">Aura Design System</h2>
+            <p class="subtitle reveal delay-2">Premium. Dark. Animated. Designed for 60fps native performance.</p>
+        </section>
+
+        <!-- SLIDE 14: AI MATCHING ENGINE -->
+        <section>
+            <p class="mono reveal">TECHNOLOGY</p>
+            <div class="glass-card reveal delay-1" style="max-width: 900px;">
+                <h3>Gemini-Powered Matching</h3>
+                <p style="color: var(--text-dim); margin-bottom: 2rem;">Our engine doesn't just look for "Graphic
+                    Designer." It understands the intent: "I need a high-end streetwear logo by Tuesday with vector
+                    files."</p>
+                <div style="height: 10px; width: 100%; background: #222; border-radius: 5px; overflow: hidden;">
+                    <div style="height: 100%; width: 85%; background: var(--gradient);"></div>
+                </div>
+                <p class="mono" style="font-size: 0.7rem; margin-top: 1rem;">85% Matching Accuracy (Alpha Testing)</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 15: TRUST & SAFETY -->
+        <section>
+            <p class="mono reveal">SECURITY</p>
+            <div class="grid reveal delay-1">
+                <div class="glass-card">
+                    <h3>Built-in Escrow</h3>
+                    <p>Funds secured before work begins. Automated release upon approval.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Identity Stack</h3>
+                    <p>Government ID verification + 2FA for all financial withdrawals.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Smart RLS</h3>
+                    <p>Row-Level Security ensuring absolute data privacy at the database layer.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 16: MARKET GROWTH (CHART) -->
+        <section>
+            <p class="mono reveal">MARKET SIZE GROWTH</p>
+            <div class="chart-container reveal delay-1">
+                <svg viewBox="0 0 800 400">
+                    <g transform="translate(50, 20)">
+                        <!-- Axes -->
+                        <line x1="0" y1="350" x2="700" y2="350" class="chart-axis" />
+                        <line x1="0" y1="0" x2="0" y2="350" class="chart-axis" />
+
+                        <!-- Grid lines -->
+                        <line x1="0" y1="262.5" x2="700" y2="262.5" class="chart-axis" style="opacity:0.3" />
+                        <line x1="0" y1="175" x2="700" y2="175" class="chart-axis" style="opacity:0.3" />
+                        <line x1="0" y1="87.5" x2="700" y2="87.5" class="chart-axis" style="opacity:0.3" />
+
+                        <!-- Line Chart -->
+                        <path d="M0,320 L140,280 L280,220 L420,150 L560,80 L700,20" class="chart-line" />
+
+                        <!-- Dots -->
+                        <circle cx="0" cy="320" r="6" fill="var(--primary)" />
+                        <circle cx="140" cy="280" r="6" fill="var(--primary)" />
+                        <circle cx="280" cy="220" r="6" fill="var(--primary)" />
+                        <circle cx="420" cy="150" r="6" fill="var(--primary)" />
+                        <circle cx="560" cy="80" r="6" fill="var(--primary)" />
+                        <circle cx="700" cy="20" r="6" fill="var(--primary)" />
+
+                        <!-- Labels -->
+                        <text x="0" y="375" class="chart-label" text-anchor="middle">2023 ($455B)</text>
+                        <text x="350" y="375" class="chart-label" text-anchor="middle">2026 ($850B)</text>
+                        <text x="700" y="375" class="chart-label" text-anchor="middle">2030 ($1.8T)</text>
+                    </g>
+                </svg>
+            </div>
+            <p style="margin-top: 2rem; color: var(--text-dim);">Global Freelance Economy Acceleration (Projected)</p>
+        </section>
+
+        <!-- SLIDE 17: GROWTH POTENTIAL (CHART) -->
+        <section>
+            <p class="mono reveal">ADDRESSABLE MARKET</p>
+            <div class="chart-container reveal delay-1" style="max-width: 600px;">
+                <svg viewBox="0 0 400 400">
+                    <circle cx="200" cy="200" r="180" fill="var(--glass)" stroke="var(--border)" />
+                    <circle cx="200" cy="200" r="120" fill="rgba(0,122,255,0.1)" stroke="var(--primary)" />
+                    <circle cx="200" cy="200" r="60" fill="var(--primary)" style="opacity:0.5" />
+                    <text x="200" y="35" class="chart-label" text-anchor="middle">TAM: $1.8T (Global Gig)</text>
+                    <text x="200" y="110" class="chart-label" text-anchor="middle">SAM: $435B (On-Demand
+                        Services)</text>
+                    <text x="200" y="205" class="chart-label" text-anchor="middle" fill="white">SOM: $12B (SEA Urban
+                        Gigs)</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- SLIDE 18: BUSINESS MODEL -->
+        <section>
+            <p class="mono reveal">ECONOMICS</p>
+            <h2 class="reveal delay-1">How We Win</h2>
+            <div class="grid reveal delay-2">
+                <div class="glass-card">
+                    <h3>18% Take Rate</h3>
+                    <p style="color: var(--text-dim);">Platform commission on every successful gig completion.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>OpSkl Pro</h3>
+                    <p style="color: var(--text-dim);">$9.99/mo SaaS model for power workers (Higher visibility, lower
+                        fees).</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Boosted Posts</h3>
+                    <p style="color: var(--text-dim);">Promoted listings for urgent employer needs ($5 - $50 per boost).
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 19: REVENUE PROJECTION (CHART) -->
+        <section>
+            <p class="mono reveal">REVENUE VISION</p>
+            <div class="chart-container reveal delay-1">
+                <svg viewBox="0 0 800 400">
+                    <g transform="translate(50, 20)">
+                        <line x1="0" y1="350" x2="700" y2="350" class="chart-axis" />
+                        <!-- Bars -->
+                        <rect x="50" y="300" width="100" height="50" rx="10" class="chart-bar" style="opacity:0.4" />
+                        <text x="100" y="290" class="chart-label" text-anchor="middle">$0.8M</text>
+
+                        <rect x="300" y="180" width="100" height="170" rx="10" class="chart-bar" style="opacity:0.7" />
+                        <text x="350" y="170" class="chart-label" text-anchor="middle">$4.2M</text>
+
+                        <rect x="550" y="50" width="100" height="300" rx="10" class="chart-bar" />
+                        <text x="600" y="40" class="chart-label" text-anchor="middle">$12.5M</text>
+
+                        <text x="100" y="375" class="chart-label" text-anchor="middle">YEAR 1</text>
+                        <text x="350" y="375" class="chart-label" text-anchor="middle">YEAR 2</text>
+                        <text x="600" y="375" class="chart-label" text-anchor="middle">YEAR 3</text>
+                    </g>
+                </svg>
+            </div>
+        </section>
+
+        <!-- SLIDE 20: UNIT ECONOMICS (CHART) -->
+        <section>
+            <p class="mono reveal">UNIT ECONOMICS</p>
+            <div class="chart-container reveal delay-1" style="max-width: 700px;">
+                <svg viewBox="0 0 600 300">
+                    <rect x="50" y="220" width="150" height="30" rx="15" fill="var(--error)" style="opacity:0.8" />
+                    <text x="125" y="210" class="chart-label" text-anchor="middle">CAC: $12.00</text>
+
+                    <rect x="250" y="50" width="300" height="200" rx="20" fill="var(--accent)" style="opacity:0.4" />
+                    <rect x="250" y="150" width="300" height="100" rx="0" fill="var(--primary)" />
+                    <text x="400" y="40" class="chart-label" text-anchor="middle">LTV: $180.00 (36 Months)</text>
+                </svg>
+            </div>
+            <p style="margin-top: 1rem; color: var(--accent); font-weight: 800; font-size: 1.5rem;">15x LTV / CAC Ratio
+            </p>
+        </section>
+
+        <!-- SLIDE 21: GO-TO-MARKET -->
+        <section>
+            <p class="mono reveal">GTM STRATEGY</p>
+            <div class="grid reveal delay-1">
+                <div class="glass-card">
+                    <h3>PHASE 1: Pilot</h3>
+                    <p>Focus on Urban Centres in India (Bangalore/Mumbai). Target Gen Z creative freelancers.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>PHASE 2: Viral Loop</h3>
+                    <p>Referral program + Trust-score mobility. Partnerships with Coworking Spaces.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>PHASE 3: SEA Scale</h3>
+                    <p>Scale into Singapore, Philippines, and Vietnam. Launch 'OpSkl Enterprise'.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 22: COMPETITIVE LANDSCAPE (MATRIX) -->
+        <section>
+            <p class="mono reveal">COMPETITION</p>
+            <div class="chart-container reveal delay-1" style="max-width: 600px;">
+                <svg viewBox="0 0 400 400">
+                    <line x1="0" y1="200" x2="400" y2="200" class="chart-axis" />
+                    <line x1="200" y1="0" x2="200" y2="400" class="chart-axis" />
+                    <text x="360" y="195" class="chart-label">MODERN UI</text>
+                    <text x="10" y="195" class="chart-label">LEGACY UI</text>
+                    <text x="205" y="20" class="chart-label">HIGH TRUST</text>
+                    <text x="205" y="390" class="chart-label">LOW TRUST</text>
+
+                    <!-- Competitors -->
+                    <circle cx="50" cy="50" r="8" fill="var(--text-dim)" />
+                    <text x="65" y="55" class="chart-label">UPWORK</text>
+
+                    <circle cx="50" cy="350" r="8" fill="var(--text-dim)" />
+                    <text x="65" y="355" class="chart-label">WHATSAPP</text>
+
+                    <circle cx="350" cy="350" r="8" fill="var(--text-dim)" />
+                    <text x="290" y="340" class="chart-label">FIVERR</text>
+
+                    <!-- OpSkl -->
+                    <circle cx="350" cy="50" r="15" fill="var(--primary)" class="reveal" />
+                    <text x="300" y="85" style="fill:var(--primary); font-weight:800;">OpSkl</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- SLIDE 23: MOAT -->
+        <section>
+            <p class="mono reveal">DEFENSIBILITY</p>
+            <h2 class="reveal delay-1">The Trust Moat</h2>
+            <p class="subtitle reveal delay-2">Every transaction on OpSkl adds to a worker's "Opportunity Graph." The
+                more they work, the harder it is to leave. We don't just have data; we have <strong>verified reputation
+                    mobility</strong>.</p>
+        </section>
+
+        <!-- SLIDE 24: TRACTION -->
+        <section>
+            <p class="mono reveal">VELOCITY</p>
+            <h2 class="reveal delay-1">Where We Are</h2>
+            <div class="grid reveal delay-2">
+                <div class="glass-card">
+                    <p class="stat-number">90%</p>
+                    <p class="stat-label">Codebase Complete</p>
+                </div>
+                <div class="glass-card">
+                    <p class="stat-number">MVP</p>
+                    <p class="stat-label">Internal Beta Live</p>
+                </div>
+                <div class="glass-card">
+                    <p class="stat-number">0-1</p>
+                    <p class="stat-label">Product Ready for Pilot</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 25: ROADMAP -->
+        <section>
+            <p class="mono reveal">FUTURE</p>
+            <div class="grid reveal delay-1">
+                <div class="glass-card">
+                    <h3>Q1 2026</h3>
+                    <p>Public Beta in Bangalore. Razorpay Integration.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Q2 2026</h3>
+                    <p>Milestone Payments. AI Dispute Resolution.</p>
+                </div>
+                <div class="glass-card">
+                    <h3>Q3 2026</h3>
+                    <p>OpSkl Insurance. Agency API Launch.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 26: TEAM -->
+        <section>
+            <p class="mono reveal">THE FOUNDATION</p>
+            <div class="glass-card reveal delay-1" style="text-align: center;">
+                <div class="team-avatar">AY</div>
+                <h3>Aryan Yadav</h3>
+                <p class="tag">Founder & Architect</p>
+                <p style="color: var(--text-dim); max-width: 400px; margin: 0 auto;">Full-stack developer and visionary.
+                    Focused on high-performance mobile ecosystems and AI systems.</p>
+            </div>
+        </section>
+
+        <!-- SLIDE 27: FINANCIAL SUMMARY -->
+        <section>
+            <p class="mono reveal">FINANCE</p>
+            <div class="glass-card reveal delay-1" style="width: 100%; max-width: 600px;">
+                <div
+                    style="display:flex; justify-content:space-between; margin-bottom:1rem; border-bottom:1px solid var(--border); padding-bottom:1rem;">
+                    <span>Burn Rate (Target)</span>
+                    <span class="highlight">$45k/mo</span>
+                </div>
+                <div
+                    style="display:flex; justify-content:space-between; margin-bottom:1rem; border-bottom:1px solid var(--border); padding-bottom:1rem;">
+                    <span>Runway (Target)</span>
+                    <span class="highlight">18 Months</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Profitability Target</span>
+                    <span class="highlight">Q4 2027</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 28: THE ASK -->
+        <section>
+            <p class="mono reveal">THE ROUND</p>
+            <div class="glass-card reveal delay-1" style="text-align: center; max-width: 800px;">
+                <h1 style="font-size: 8rem; margin: 0;">$1M</h1>
+                <p class="mono">FOR 10-15% EQUITY</p>
+                <div class="grid" style="margin-top: 3rem;">
+                    <div>
+                        <p class="stat-number" style="font-size: 2rem;">50%</p>
+                        <p class="stat-label">Engineering</p>
+                    </div>
+                    <div>
+                        <p class="stat-number" style="font-size: 2rem;">30%</p>
+                        <p class="stat-label">Growth/Mkt</p>
+                    </div>
+                    <div>
+                        <p class="stat-number" style="font-size: 2rem;">20%</p>
+                        <p class="stat-label">Ops/Legal</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 29: CLOSING VISION -->
+        <section>
+            <div class="bg-glow"></div>
+            <h1 class="reveal">Built for the Bold.</h1>
+            <p class="subtitle reveal delay-1">The future of work is not a desk. It's an opportunity.</p>
+            <p class="mono reveal delay-2" style="margin-top: 4rem;">invest@opskl.xyz | @opsklapp</p>
+        </section>
+
+    </div>
+
+    <script>
+        const deck = document.getElementById('deck');
+        const dotsContainer = document.getElementById('navDots');
+        const sections = document.querySelectorAll('section');
+
+        // Create navigation dots
+        sections.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.classList.add('dot');
+            if (i === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => {
+                sections[i].scrollIntoView({ behavior: 'smooth' });
+            });
+            dotsContainer.appendChild(dot);
+        });
+
+        const dots = document.querySelectorAll('.dot');
+
+        // Update active slide on scroll
+        deck.addEventListener('scroll', () => {
+            const index = Math.round(deck.scrollTop / window.innerHeight);
+
+            sections.forEach((s, i) => {
+                if (i === index) {
+                    s.classList.add('active');
+                    dots[i].classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                    dots[i].classList.remove('active');
+                }
+            });
+        });
+
+        // Keyboard navigation
+        window.addEventListener('keydown', (e) => {
+            const index = Math.round(deck.scrollTop / window.innerHeight);
+            if (e.key === 'ArrowDown' && index < sections.length - 1) {
+                sections[index + 1].scrollIntoView({ behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp' && index > 0) {
+                sections[index - 1].scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    </script>
+</body>
+
+</html>

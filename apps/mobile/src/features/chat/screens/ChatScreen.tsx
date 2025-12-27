@@ -5,7 +5,7 @@ import { supabase } from '@api/supabase';
 import { AuraColors, AuraSpacing } from '@theme/aura';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
-import { Send, Image as ImageIcon, Mic, Plus, MoreVertical, Check, CheckCheck } from 'lucide-react-native';
+import { Send, ImageIcon, Mic, Plus, MoreVertical, Check, CheckCheck, Video, Phone } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { sanitizeInput } from '@core/utils/security';
@@ -50,6 +50,7 @@ export default function ChatScreen() {
 
     const [messages, setMessages] = useState<any[]>([]);
     const [input, setInput] = useState('');
+    const [isRecipientTyping, setIsRecipientTyping] = useState(false);
     const flatListRef = useRef<FlatList>(null);
 
     useEffect(() => {
@@ -101,8 +102,31 @@ export default function ChatScreen() {
         };
         markRead();
 
-        return () => { supabase.removeChannel(subscription); };
+        const presenceChannel = supabase.channel(`typing:${roomId}`);
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState();
+                const typingUsers = Object.values(state).flat().filter((u: any) => u.user_id !== user.id && u.isTyping);
+                setIsRecipientTyping(typingUsers.length > 0);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await presenceChannel.track({ user_id: user.id, isTyping: false });
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(subscription);
+            supabase.removeChannel(presenceChannel);
+        };
     }, [roomId, user?.id]);
+
+    const handleType = (text: string) => {
+        setInput(text);
+        const channel = supabase.channel(`typing:${roomId}`);
+        channel.track({ user_id: user?.id, isTyping: text.length > 0 });
+    };
 
     const sendMessage = async () => {
         const cleanInput = sanitizeInput(input);
@@ -134,20 +158,25 @@ export default function ChatScreen() {
             <AuraHeader
                 title={recipientName || 'Terminal'}
                 showBack
-                action={{
-                    icon: <MoreVertical color={AuraColors.white} size={24} />,
-                    onPress: () => {
-                        Alert.alert(
-                            "Manage Connection",
-                            "What would you like to do?",
-                            [
-                                { text: "Cancel", style: "cancel" },
-                                { text: "Report Abuse", onPress: () => Alert.alert("Reported", "Safety team notified."), style: 'destructive' },
-                                { text: "Block User", onPress: () => Alert.alert("Blocked", "You will no longer receive messages."), style: 'destructive' }
-                            ]
-                        );
-                    }
-                }}
+                rightElement={
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <TouchableOpacity onPress={() => haptics.selection()}><Phone size={20} color={AuraColors.primary} /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => haptics.selection()}><Video size={20} color={AuraColors.primary} /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => {
+                            Alert.alert(
+                                "Manage Connection",
+                                "What would you like to do?",
+                                [
+                                    { text: "Cancel", style: "cancel" },
+                                    { text: "Report Abuse", onPress: () => Alert.alert("Reported", "Safety team notified."), style: 'destructive' },
+                                    { text: "Block User", onPress: () => Alert.alert("Blocked", "You will no longer receive messages."), style: 'destructive' }
+                                ]
+                            );
+                        }}>
+                            <MoreVertical color={AuraColors.gray500} size={24} />
+                        </TouchableOpacity>
+                    </View>
+                }
             />
 
             <FlatList
@@ -158,6 +187,11 @@ export default function ChatScreen() {
                 contentContainerStyle={styles.listContent}
                 onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                 showsVerticalScrollIndicator={false}
+                ListFooterComponent={isRecipientTyping ? (
+                    <View style={styles.typingIndicator}>
+                        <AuraText variant="caption" color={AuraColors.primary}>Operative is transmitting signal...</AuraText>
+                    </View>
+                ) : null}
             />
 
             <KeyboardAvoidingView
@@ -172,7 +206,7 @@ export default function ChatScreen() {
                         <TextInput
                             style={styles.input}
                             value={input}
-                            onChangeText={setInput}
+                            onChangeText={handleType}
                             placeholder="Message..."
                             placeholderTextColor={AuraColors.gray500}
                             multiline
@@ -283,5 +317,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 4,
+    },
+    typingIndicator: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
     }
 });

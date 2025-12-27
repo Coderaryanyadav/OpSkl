@@ -17,6 +17,7 @@ interface AuraInputProps extends TextInputProps {
     error?: string;
     success?: boolean;
     leftIcon?: React.ReactNode;
+    rightIcon?: React.ReactNode;
     icon?: string;
     containerStyle?: ViewStyle;
 }
@@ -26,6 +27,7 @@ export const AuraInput: React.FC<AuraInputProps> = ({
     error,
     success,
     leftIcon,
+    rightIcon,
     icon,
     secureTextEntry,
     containerStyle,
@@ -134,6 +136,8 @@ export const AuraInput: React.FC<AuraInputProps> = ({
                             <AlertCircle color={AuraColors.error} size={18} />
                         </Animated.View>
                     )}
+
+                    {rightIcon && <View>{rightIcon}</View>}
 
                     {secureTextEntry && (
                         <TouchableOpacity

@@ -10,9 +10,10 @@ import { AuraBadge } from '@core/components/AuraBadge';
 import { AuraLoader } from '@core/components/AuraLoader';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
-import { MessageSquare, Target, ShieldCheck, Heart } from 'lucide-react-native';
+import { MessageSquare, Target, ShieldCheck, Heart, Calendar } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '@context/AuthProvider';
+import { useAura } from '@core/context/AuraProvider';
 import { Repository } from '@api/repository';
 
 export default function PublicProfileScreen() {
@@ -21,6 +22,7 @@ export default function PublicProfileScreen() {
     const navigation = useNavigation<any>();
     const { userId } = (route.params as { userId: string }) || {};
     const { user } = useAuth(); // Logged in user
+    const { showToast } = useAura();
 
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -154,6 +156,16 @@ export default function PublicProfileScreen() {
                             navigation.navigate('CreateGig', { targetUserId: userId });
                         }}
                         icon={<Target size={18} color={AuraColors.white} />}
+                        style={{ marginTop: 16 }}
+                    />
+                    <AuraButton
+                        title="SCHEDULE INTEL BRIEFING"
+                        variant="secondary"
+                        onPress={() => {
+                            haptics.heavy();
+                            showToast({ message: 'Briefing request transmitted to operative', type: 'success' });
+                        }}
+                        icon={<Calendar size={18} color={AuraColors.primary} />}
                         style={{ marginTop: 16 }}
                     />
                 </AuraMotion>

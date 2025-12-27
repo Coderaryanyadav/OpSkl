@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Share } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '@api/supabase';
 import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
@@ -15,7 +15,7 @@ import { useAura } from '@core/context/AuraProvider';
 import { AuraBadge } from '@core/components/AuraBadge';
 import { Repository } from '@api/repository';
 import { Gig, Deliverable, EscrowTransaction, Milestone } from '@features/gig-discovery/types';
-import { Upload, CheckCircle, Clock, ShieldCheck, FileText, DollarSign, MessageSquare, AlertTriangle, Layers, Flag } from 'lucide-react-native';
+import { Upload, CheckCircle, Clock, ShieldCheck, FileText, DollarSign, MessageSquare, AlertTriangle, Layers, Flag, Share2 } from 'lucide-react-native';
 import { ApplicationModal } from '../components/ApplicationModal';
 import { Analytics } from '@core/utils/analytics';
 
@@ -100,6 +100,19 @@ export default function GigDetailsScreen() {
 
         return () => { supabase.removeChannel(sub); };
     }, [gigId, fetchDetails]);
+
+    const handleShare = async () => {
+        if (!gig) return;
+        haptics.selection();
+        try {
+            await Share.share({
+                message: `Check out this mission on OpSkl: ${gig.title}\nBounty: ₹${(gig.pay_amount_cents || 0) / 100}\nJoin the operative network: opskl://gig/${gig.id}`,
+            });
+            Analytics.track('GIG_SHARED', { gig_id: gigId });
+        } catch (error) {
+            console.error('Sharing failed', error);
+        }
+    };
 
     const handleSubmitDeliverable = async () => {
         if (!fileLink.trim()) {
@@ -242,7 +255,15 @@ export default function GigDetailsScreen() {
 
     return (
         <View style={styles.container}>
-            <AuraHeader title="Mission Control" showBack />
+            <AuraHeader
+                title="Mission Control"
+                showBack
+                rightElement={
+                    <TouchableOpacity onPress={handleShare} style={{ padding: 8 }}>
+                        <Share2 size={20} color={AuraColors.primary} />
+                    </TouchableOpacity>
+                }
+            />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 

@@ -9,11 +9,14 @@ import { AuraText } from '@core/components/AuraText';
 import { AuraLoader } from '@core/components/AuraLoader';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { useAuth } from '@context/AuthProvider';
-import { Zap, CheckCircle, Activity, ShieldCheck } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { AuraButton } from '@core/components/AuraButton';
+import { Zap, CheckCircle, Activity, ShieldCheck, Search } from 'lucide-react-native';
 import { Gig, ApplicationStatus } from '@features/gig-discovery/types';
 
 export default function WorkerMyGigsScreen() {
     const haptics = useAuraHaptics();
+    const navigation = useNavigation<any>();
     const { user } = useAuth();
     const [activeGigs, setActiveGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
     const [pendingGigs, setPendingGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
@@ -92,9 +95,16 @@ export default function WorkerMyGigsScreen() {
                     {icon}
                 </View>
                 <AuraText variant="h3" style={{ marginTop: 24 }}>{title}</AuraText>
-                <AuraText variant="body" color={AuraColors.gray400} align="center" style={{ marginTop: 12, paddingHorizontal: 32 }}>
+                <AuraText variant="body" color={AuraColors.gray400} align="center" style={{ marginTop: 12, paddingHorizontal: 32, marginBottom: 24 }}>
                     Active assignments from your discovery feed will appear here.
                 </AuraText>
+                <AuraButton
+                    title="SCAN FOR MISSIONS"
+                    variant="primary"
+                    onPress={() => navigation.navigate('Discovery')}
+                    icon={<Search size={18} color={AuraColors.white} />}
+                    style={{ width: '100%' }}
+                />
             </View>
         </AuraMotion>
     );

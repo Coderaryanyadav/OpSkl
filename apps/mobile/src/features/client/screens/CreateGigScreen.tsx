@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraSpacing, AuraBorderRadius } from '@theme/aura';
@@ -14,10 +14,13 @@ import { useAuth } from '@context/AuthProvider';
 import {
     MapPin, Sparkles,
     Camera, Video, Palette, GraduationCap, Bike,
-    Megaphone, Smartphone, Target, Layers, Plus, Trash2
+    Megaphone, Smartphone, Target, Layers, Plus, Trash2,
+    Calendar, Trophy, BookOpen
 } from 'lucide-react-native';
 import { supabase } from '@api/supabase';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Save } from 'lucide-react-native';
 
 const MISSION_TYPES = [
     { label: 'Social', icon: Smartphone, color: '#007AFF' },
@@ -46,7 +49,57 @@ export default function CreateGigScreen() {
     const [predictedPrice, setPredictedPrice] = useState<number | null>(null);
     const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [isPredicting, setIsPredicting] = useState(false);
+    const [isFeatured, setIsFeatured] = useState(false);
+    const [expiryDays, setExpiryDays] = useState('7');
     const [loading, setLoading] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    useEffect(() => {
+        loadDraft();
+    }, []);
+
+    const loadDraft = async () => {
+        try {
+            const draft = await AsyncStorage.getItem('@opskl_gig_draft');
+            if (draft) {
+                const data = JSON.parse(draft);
+                setTitle(data.title || '');
+                setDescription(data.description || '');
+                setPay(data.pay || '');
+                setDuration(data.duration || '60');
+                setSelectedCategory(data.category || '');
+                setUrgency(data.urgency || 'medium');
+            }
+        } catch (e) {
+            console.error('Draft load failed');
+        }
+    };
+
+    const saveDraft = async () => {
+        try {
+            const draft = { title, description, pay, duration, category: selectedCategory, urgency };
+            await AsyncStorage.setItem('@opskl_gig_draft', JSON.stringify(draft));
+            showToast({ message: 'Mission Draft Cached', type: 'success' });
+            haptics.success();
+        } catch (e) {
+            showToast({ message: 'Cache failure', type: 'error' });
+        }
+    };
+
+    const clearDraft = async () => {
+        await AsyncStorage.removeItem('@opskl_gig_draft');
+    };
+
+    const loadTemplate = async () => {
+        haptics.selection();
+        // Mock template for now, could be fetched from DB
+        setTitle('Professional Social Media Shoot');
+        setDescription('Need a tactical operative for a high-intensity social broadcast. High-quality visuals required.');
+        setPay('5000');
+        setDuration('120');
+        setSelectedCategory('Visuals');
+        showToast({ message: 'Strategic Template Loaded', type: 'success' });
+    };
 
     // Milestones
     const [useMilestones, setUseMilestones] = useState(false);
@@ -106,6 +159,29 @@ export default function CreateGigScreen() {
         }
     }, [duration, selectedCategory, urgency]);
 
+    const generateDescription = async () => {
+        if (!title || !selectedCategory) {
+            showToast({ message: "Define Title & Category for AI inference", type: 'error' });
+            return;
+        }
+        setIsGenerating(true);
+        haptics.heavy();
+
+        try {
+            if (!GEMINI_API_KEY) throw new Error("AI core offline");
+            const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+            const prompt = `Write a professional, tactical, and concise mission briefing (freelance gig description) for: "${title}" in the "${selectedCategory}" category. Use a cyberpunk/strategic tone. Return ONLY the description text.`;
+            const result = await model.generateContent(prompt);
+            setDescription(result.response.text());
+            haptics.success();
+        } catch (e: any) {
+            showToast({ message: e.message || "Insight generation failed", type: 'error' });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const handleCreate = async () => {
         if (!selectedCategory || !title || !description || !pay || !location) {
             haptics.error();
@@ -155,7 +231,10 @@ export default function CreateGigScreen() {
                 title: 'Deployment Active',
                 message: 'Mission has been broadcasted to the global operative network.',
                 type: 'success',
-                onConfirm: () => navigation.goBack()
+                onConfirm: async () => {
+                    await clearDraft();
+                    navigation.goBack();
+                }
             });
         } catch (err: any) {
             haptics.error();
@@ -170,7 +249,20 @@ export default function CreateGigScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <AuraHeader title="Mission Deployment" showBack />
+            <AuraHeader
+                title="Mission Deployment"
+                showBack
+                rightElement={
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity onPress={loadTemplate} style={{ padding: 8 }}>
+                            <BookOpen size={20} color={AuraColors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={saveDraft} style={{ padding: 8 }}>
+                            <Save size={20} color={AuraColors.primary} />
+                        </TouchableOpacity>
+                    </View>
+                }
+            />
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -219,6 +311,11 @@ export default function CreateGigScreen() {
                         onChangeText={setDescription}
                         multiline
                         style={styles.textArea}
+                        rightIcon={
+                            <TouchableOpacity onPress={generateDescription} disabled={isGenerating}>
+                                {isGenerating ? <ActivityIndicator size="small" color={AuraColors.primary} /> : <Sparkles size={20} color={AuraColors.primary} />}
+                            </TouchableOpacity>
+                        }
                     />
 
                     {/* Operational Area */}
@@ -301,6 +398,31 @@ export default function CreateGigScreen() {
                             />
                         </View>
                     </View>
+
+                    {/* Expiry & Promotion */}
+                    <AuraMotion type="slide">
+                        <View style={[styles.logisticsRow, { marginBottom: 24 }]}>
+                            <View style={{ flex: 1 }}>
+                                <AuraInput
+                                    label="Expires In (Days)"
+                                    value={expiryDays}
+                                    onChangeText={setExpiryDays}
+                                    keyboardType="numeric"
+                                    icon="lock"
+                                />
+                            </View>
+                            <View style={{ width: 16 }} />
+                            <TouchableOpacity
+                                style={[styles.priorityBtn, isFeatured && styles.featuredBtnActive, { flex: 1, height: 60, marginTop: 8 }]}
+                                onPress={() => { setIsFeatured(!isFeatured); haptics.heavy(); }}
+                            >
+                                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                                    <Trophy size={16} color={isFeatured ? AuraColors.warning : AuraColors.gray600} />
+                                    <AuraText variant="label" color={isFeatured ? AuraColors.warning : AuraColors.gray600}>FEATURED</AuraText>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </AuraMotion>
 
                     {/* AI Advisor */}
                     {(predictedPrice || isPredicting) ? (
@@ -391,7 +513,7 @@ export default function CreateGigScreen() {
 
                 <View style={{ height: 100 }} />
             </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingView >
     );
 }
 
@@ -523,6 +645,10 @@ const styles = StyleSheet.create({
         marginTop: 8,
         borderTopWidth: 1,
         borderTopColor: 'rgba(255, 159, 10, 0.2)',
+    },
+    featuredBtnActive: {
+        borderColor: AuraColors.warning,
+        backgroundColor: 'rgba(255, 159, 10, 0.05)',
     },
     footer: {
         paddingHorizontal: AuraSpacing.xl,

@@ -1,31 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { supabase } from '@api/supabase';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from '@core/components/AuraText';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraHeader } from '@core/components/AuraHeader';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraLoader } from '@core/components/AuraLoader';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraBadge } from '@core/components/AuraBadge';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraMotion } from '@core/components/AuraMotion';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { AuraButton } from '@core/components/AuraButton';
 import { useAura } from '@core/context/AuraProvider';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAuth } from '@context/AuthProvider';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useGigStore } from '@store/useGigStore';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useNavigation } from '@react-navigation/native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { Users, ChevronRight, Briefcase, Activity, Plus } from 'lucide-react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { Users, ChevronRight, Briefcase, Activity, Plus, Target } from 'lucide-react-native';
 
 export default function ClientManageGigsScreen() {
     const haptics = useAuraHaptics();
@@ -144,9 +132,16 @@ export default function ClientManageGigsScreen() {
                                 <Briefcase size={40} color={AuraColors.gray700} />
                             </View>
                             <AuraText variant="h2" align="center">System Silent</AuraText>
-                            <AuraText variant="body" color={AuraColors.gray500} align="center" style={{ marginTop: 8 }}>
+                            <AuraText variant="body" color={AuraColors.gray500} align="center" style={{ marginTop: 8, marginBottom: 32 }}>
                                 No deployment signals active. Pushing assignments will activate this dashboard.
                             </AuraText>
+                            <AuraButton
+                                title="DEPLOY NEW MISSION"
+                                variant="primary"
+                                onPress={() => navigation.navigate('Create')}
+                                icon={<Target size={18} color={AuraColors.white} />}
+                                style={{ width: '100%' }}
+                            />
                         </View>
                     )
                 }
