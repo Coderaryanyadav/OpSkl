@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpSkl | The Future of Bharat's Gig Economy</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.5);
+            --secondary: #a855f7;
+            --accent: #f43f5e;
+            --bg: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --text: #f9fafb;
+            --text-muted: #9ca3af;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            background: linear-gradient(to right, #fff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .hero {
+            text-align: center;
+            background: radial-gradient(circle at center, var(--primary-glow) 0%, transparent 70%);
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        .badge {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: 24px;
+            backdrop-filter: blur(12px);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            background: none;
+            -webkit-text-fill-color: initial;
+            color: #fff;
+        }
+
+        .stat-value {
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .market-visual {
+            position: relative;
+            height: 400px;
+            margin-top: 4rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 32px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-bar {
+            width: 60px;
+            background: linear-gradient(to top, var(--primary), var(--secondary));
+            border-radius: 8px 8px 0 0;
+            margin: 0 10px;
+            position: relative;
+            transition: height 1s ease-out;
+        }
+
+        .chart-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        footer {
+            padding: 4rem 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.3s;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate {
+            animation: fadeIn 0.8s ease forwards;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Slide 1: Cover -->
+        <section class="hero">
+            <span class="badge">Series A / Seed Investment Proposal</span>
+            <h1>OpSkl.</h1>
+            <p>Empowering Bharat's workforce with a trust-first, AI-driven gig infrastructure.</p>
+            <a href="#problem" class="btn">Discover the Vision</a>
+        </section>
+
+        <!-- Slide 2: The Problem -->
+        <section id="problem">
+            <span class="tagline">The Friction</span>
+            <h2>The ₹2.5 Trillion Middleman Problem</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Broken Trust</h3>
+                    <p>Unverified profiles and lack of accountability lead to a 35% transaction failure rate in
+                        unorganized labor.</p>
+                </div>
+                <div class="card">
+                    <h3>Payment Leakage</h3>
+                    <p>Middlemen take up to 40% of worker earnings. Workers wait 14+ days for payment release.</p>
+                </div>
+                <div class="card">
+                    <h3>Inefficient Matching</h3>
+                    <p>Current platforms use outdated keyword search. No context-aware matching for diverse Indian
+                        skillsets.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: The Solution (Aura Bharat) -->
+        <section>
+            <span class="tagline">The Infrastructure</span>
+            <h2>OpSkl: Trust is the New Currency</h2>
+            <div class="grid">
+                <div class="card" style="border-color: var(--secondary);">
+                    <span class="stat-value">Aadhaar</span>
+                    <h3>Verified Identity</h3>
+                    <p>Mandatory KYC for every user. Eliminating ghosts and bad actors from day one.</p>
+                </div>
+                <div class="card" style="border-color: var(--primary);">
+                    <span class="stat-value">UPI 2.0</span>
+                    <h3>Smart Escrow</h3>
+                    <p>Instant booking payments held in secure escrow. Auto-release upon worker check-in/out.</p>
+                </div>
+                <div class="card" style="border-color: var(--accent);">
+                    <span class="stat-value">AI</span>
+                    <h3>Gemini Matching</h3>
+                    <p>Deep matching based on intent and location. 10x faster recruitment than local contractors.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: Market -->
+        <section>
+            <span class="tagline">Market Dynamics</span>
+            <h2>Massive Tailwinds in Bharat</h2>
+            <p>India's gig economy is projected to reach $455B by 2030. We are targeting the 500M workers currently in
+                the unorganized sector.</p>
+            <div class="market-visual">
+                <div class="chart-bar" style="height: 100px;"><span class="chart-label">2023: $120B</span></div>
+                <div class="chart-bar" style="height: 180px;"><span class="chart-label">2025: $210B</span></div>
+                <div class="chart-bar" style="height: 280px;"><span class="chart-label">2027: $330B</span></div>
+                <div class="chart-bar" style="height: 380px;"><span class="chart-label">2030: $455B</span></div>
+            </div>
+        </section>
+
+        <!-- Slide 5: Traction -->
+        <section>
+            <span class="tagline">The Moat</span>
+            <h2>The Trust Graph</h2>
+            <div class="grid">
+                <div class="card">
+                    <span class="stat-value">15x</span>
+                    <h3>LTV / CAC</h3>
+                    <p>Viral loops via worker communities and high retention through "Credit History" for laborers.</p>
+                </div>
+                <div class="card">
+                    <span class="stat-value">0%</span>
+                    <h3>Platform Leakage</h3>
+                    <p>Escrow-first booking model ensures 100% of transactions happen on-platform.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: The Ask -->
+        <section>
+            <span class="tagline">Expansion</span>
+            <h2>The $1 Million Ask</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>50% Product & Eng</h3>
+                    <p>Scaling the AI matching engine and building out regional language support (Hinglish, Tamil,
+                        Bengali).</p>
+                </div>
+                <div class="card">
+                    <h3>30% User Acquisition</h3>
+                    <p>Hyper-local marketing in Tier 1 & Tier 2 logistics corridors.</p>
+                </div>
+                <div class="card">
+                    <h3>20% Operations</h3>
+                    <p>Legal compliance and Aadhaar bridge integration.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <h2>Building the Future of Bharat's Labor</h2>
+            <p style="margin: 1rem 0 2rem;">Contact: pitch@opskl.io | +91 99XXXXXXX</p>
+            <p>&copy; 2026 OpSkl Technologies Private Limited</p>
+        </footer>
+    </div>
+</body>
+
+</html>

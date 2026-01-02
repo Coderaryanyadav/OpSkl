@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpSkl | India's Future Gig Infrastructure</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600;800&family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@400&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #020205;
+            --surface: #0a0a12;
+            --primary: #4f46e5;
+            --primary-bright: #818cf8;
+            --secondary: #9333ea;
+            --accent: #f43f5e;
+            --success: #10b981;
+            --text: #f8fafc;
+            --text-muted: #64748b;
+            --border: rgba(255, 255, 255, 0.05);
+            --glow: rgba(79, 70, 229, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::-webkit-scrollbar {
+            width: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            line-height: 1.4;
+        }
+
+        /* Ambient Background */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            background: radial-gradient(circle at 10% 10%, #0c0c1d 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, #150c1d 0%, transparent 40%);
+        }
+
+        .blob {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: var(--primary);
+            filter: blur(150px);
+            opacity: 0.1;
+            border-radius: 50%;
+            animation: move 20s infinite alternate;
+        }
+
+        .blob-2 {
+            background: var(--secondary);
+            right: -100px;
+            top: -100px;
+            animation-delay: -5s;
+        }
+
+        @keyframes move {
+            from {
+                transform: translate(-10%, -10%) scale(1);
+            }
+
+            to {
+                transform: translate(10%, 10%) scale(1.2);
+            }
+        }
+
+        .deck {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        section {
+            height: 100vh;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 12%;
+            position: relative;
+        }
+
+        .nav {
+            position: fixed;
+            right: 3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .nav-dot {
+            width: 4px;
+            height: 24px;
+            background: var(--border);
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 2px;
+        }
+
+        .nav-dot.active {
+            background: var(--primary-bright);
+            height: 48px;
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        .label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--primary-bright);
+            margin-bottom: 2rem;
+            opacity: 0.8;
+            display: block;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(4rem, 12vw, 9rem);
+            font-weight: 700;
+            line-height: 0.85;
+            letter-spacing: -0.05em;
+            margin-bottom: 2.5rem;
+            background: linear-gradient(180deg, #fff 30%, rgba(255, 255, 255, 0.2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 500;
+            line-height: 1;
+            letter-spacing: -0.03em;
+            margin-bottom: 2rem;
+            color: #fff;
+        }
+
+        p {
+            font-size: clamp(1.2rem, 2vw, 1.8rem);
+            color: var(--text-muted);
+            max-width: 850px;
+            font-weight: 300;
+            line-height: 1.5;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), transparent);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 32px;
+            backdrop-filter: blur(20px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.1), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.6s;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .stat-huge {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .stat-label {
+            font-family: 'JetBrains Mono';
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--text-muted);
+        }
+
+        .visual-container {
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 4rem;
+        }
+
+        /* SVG Chart Polish */
+        .chart-svg {
+            width: 100%;
+            height: 400px;
+            overflow: visible;
+        }
+
+        .line-path {
+            fill: none;
+            stroke: url(#line-grad);
+            stroke-width: 6;
+            stroke-linecap: round;
+            stroke-dasharray: 2000;
+            stroke-dashoffset: 2000;
+            transition: stroke-dashoffset 2.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        section.active .line-path {
+            stroke-dashoffset: 0;
+        }
+
+        .point-glow {
+            fill: var(--primary-bright);
+            filter: blur(8px);
+            opacity: 0.6;
+        }
+
+        /* Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        section.active .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .delay-1 {
+            transition-delay: 0.15s;
+        }
+
+        .delay-2 {
+            transition-delay: 0.3s;
+        }
+
+        .delay-3 {
+            transition-delay: 0.45s;
+        }
+
+        .tag {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--primary-bright);
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            display: inline-block;
+            margin-bottom: 1.5rem;
+        }
+
+        .matrix-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1;
+            border: 1px solid var(--border);
+            margin-top: 2rem;
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .matrix-axis {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .y-axis {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+        }
+
+        .x-axis {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+        }
+
+        .competitor-dot {
+            position: absolute;
+            padding: 0.8rem 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .competitor-dot.opskl {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            border: none;
+            box-shadow: 0 0 50px rgba(79, 70, 229, 0.4);
+            transform: scale(1.2);
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-bg">
+        <div class="blob"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="nav" id="nav"></div>
+
+    <div class="deck" id="deck">
+
+        <!-- 1. COVER -->
+        <section class="active">
+            <span class="label reveal">The Evolution of Labor</span>
+            <h1 class="reveal delay-1">OpSkl.</h1>
+            <p class="reveal delay-2">Building Bharat's <span class="gradient-text">Trust Infrastructure</span> for the
+                next 500 million gig workers.</p>
+        </section>
+
+        <!-- 2. THE CHURN PHENOMENON -->
+        <section>
+            <span class="tag reveal">PROBLEM SPACE</span>
+            <h2 class="reveal delay-1">The "Invisible Tax" on Indian Talent.</h2>
+            <div class="grid reveal delay-2">
+                <div class="card">
+                    <span class="stat-huge gradient-text">40%</span>
+                    <span class="stat-label">Middleman Commission</span>
+                    <p style="font-size: 1rem; margin-top: 1rem;">Unorganized contractors drain worker earnings without
+                        providing security.</p>
+                </div>
+                <div class="card">
+                    <span class="stat-huge" style="color: var(--accent);">₹2.5T</span>
+                    <span class="stat-label">Annual Wage Leakage</span>
+                    <p style="font-size: 1rem; margin-top: 1rem;">Capital lost to inefficient matching and platform
+                        bypass.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. TRUST GRAPH -->
+        <section>
+            <span class="label reveal">THE ASSET</span>
+            <h2 class="reveal delay-1">Reputation is the new Credit Score.</h2>
+            <p class="reveal delay-2">We turn subjective performance into an objective <span class="gradient-text">Trust
+                    Graph</span>. Every gig completed, every milestone reached, builds a portable 1st-party career
+                history.</p>
+            <div class="visual-container reveal delay-3">
+                <svg class="chart-svg" viewBox="0 0 1000 400">
+                    <defs>
+                        <linearGradient id="line-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:var(--primary)" />
+                            <stop offset="100%" style="stop-color:var(--secondary)" />
+                        </linearGradient>
+                    </defs>
+                    <path class="line-path" d="M 50 350 Q 250 340 350 250 T 650 150 T 950 50" />
+                    <circle class="point-glow" cx="950" cy="50" r="15" />
+                    <circle fill="#fff" cx="950" cy="50" r="5" />
+                </svg>
+            </div>
+        </section>
+
+        <!-- 4. PRODUCT: SMART ESCROW -->
+        <section>
+            <span class="tag reveal">CORE ENGINE</span>
+            <h2 class="reveal delay-1">Smart Escrow: <span class="gradient-text">Zero-Leakage</span> Commerce.</h2>
+            <div class="grid reveal delay-2">
+                <div class="card">
+                    <span class="card-icon">🔐</span>
+                    <h3>UPI-Native Lock</h3>
+                    <p>Funds are secured instantly upon booking. No more "will they pay?" anxiety.</p>
+                </div>
+                <div class="card">
+                    <span class="card-icon">⚡</span>
+                    <h3>Milestone Release</h3>
+                    <p>Programmable payouts. Workers get paid as they work, keeping motivation high.</p>
+                </div>
+                <div class="card">
+                    <span class="card-icon">⚖️</span>
+                    <h3>Dispute Layer</h3>
+                    <p>Our AI analyzes deliverables to resolve conflicts in minutes, not weeks.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. MATCHING: BHARAT INTELLIGENCE -->
+        <section>
+            <span class="label reveal">TECHNOLOGY</span>
+            <h2 class="reveal delay-1">AI that understands <span class="gradient-text">Intent</span>.</h2>
+            <p class="reveal delay-2">We don't search. We match. Using Gemini LLMs, we understand the nuances of
+                Bharat's language (Hinglish) to pair the right talent with the right task in < 30 seconds.</p>
+                    <div class="card reveal delay-3" style="margin-top: 3rem; background: var(--surface);">
+                        <code
+                            style="color: var(--primary-bright); font-family: 'JetBrains Mono';">Match Found: [Electrical_Hacker] -> [Industrial_Park_Phase_2] (Match Score: 98%)</code>
+                    </div>
+        </section>
+
+        <!-- 6. MARKET DEPTH -->
+        <section>
+            <span class="tag reveal">TAM</span>
+            <h2 class="reveal delay-1">The 500 million worker Opportunity.</h2>
+            <p class="reveal delay-2">India's gig economy is the global engine of growth. We are building the operating
+                system for it.</p>
+            <div class="grid reveal delay-3">
+                <div class="card">
+                    <span class="stat-huge">₹6.4T</span>
+                    <span class="stat-label">Market Size by 2030</span>
+                </div>
+                <div class="card">
+                    <span class="stat-huge">25%</span>
+                    <span class="stat-label">Gig Contribution to Workforce</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. COMPETITIVE POSITION -->
+        <section>
+            <span class="label reveal">STRATEGY</span>
+            <h2 class="reveal delay-1">Occupying the <span class="gradient-text">High-Trust</span> Quadrant.</h2>
+            <div style="display: flex; gap: 5rem; align-items: center;" class="reveal delay-2">
+                <div class="matrix-container">
+                    <div class="matrix-axis y-axis"></div>
+                    <div class="matrix-axis x-axis"></div>
+                    <div class="competitor-dot" style="top: 20%; left: 15%;">Urban Co.</div>
+                    <div class="competitor-dot" style="top: 75%; left: 70%;">Fiverr</div>
+                    <div class="competitor-dot" style="top: 85%; left: 20%;">WhatsApp</div>
+                    <div class="competitor-dot opskl" style="top: 15%; left: 75%;">OpSkl</div>
+                </div>
+                <div>
+                    <p style="font-size: 1.2rem;">While incumbents focus on high-ticket services or web-first
+                        freelancers, OpSkl dominates the high-trust, mobile-native micro-gig space for the massive
+                        unorganized sector.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. UNIT ECONOMICS -->
+        <section>
+            <span class="tag reveal">FINANCIALS</span>
+            <h2 class="reveal delay-1">Profitable <span class="gradient-text">Virality</span>.</h2>
+            <div class="grid reveal delay-2">
+                <div class="card">
+                    <h3>₹800</h3>
+                    <span class="stat-label">CAC</span>
+                </div>
+                <div class="card">
+                    <h3>₹12,500</h3>
+                    <span class="stat-label">LTV (18m)</span>
+                </div>
+                <div class="card">
+                    <h3>15.6x</h3>
+                    <span class="stat-label">LTV/CAC</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9. ROADMAP -->
+        <section>
+            <span class="label reveal">EXECUTION</span>
+            <h2 class="reveal delay-1">30 Days to MVP. <span class="gradient-text">365 Days</span> to Dominance.</h2>
+            <div class="grid reveal delay-2">
+                <div class="card">
+                    <h3>Q1 Launch</h3>
+                    <p>Bangalore Corridor. 5,000 Verified Profiles.</p>
+                </div>
+                <div class="card">
+                    <h3>Q2 Scale</h3>
+                    <p>Mumbai & Delhi-NCR Hubs. UPI Auto-Escrow v2.</p>
+                </div>
+                <div class="card">
+                    <h3>Q3 Moat</h3>
+                    <p>Financial Bridge. Micro-lending via Trust Score.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 10. THE FOUNDER -->
+        <section>
+            <span class="tag reveal">FOUNDER</span>
+            <div style="display: flex; gap: 4rem; align-items: center;" class="reveal delay-1">
+                <div
+                    style="width: 280px; height: 280px; border: 1px solid var(--primary-bright); border-radius: 40px; display: flex; align-items: center; justify-content: center; font-size: 6rem; font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--secondary));">
+                    AY</div>
+                <div>
+                    <h2>Aryan Yadav</h2>
+                    <p>Engineer. Architect. Visionary. Trained by Deepmind to execute at lightspeed. Obsessed with
+                        building infrastructure that changes lives.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 11. THE ASK -->
+        <section>
+            <span class="label reveal">FINANCING</span>
+            <h1 class="reveal delay-1 gradient-text">₹8 Crore</h1>
+            <p class="reveal delay-2">Raising Seed Capital for 12-15% equity. Scaling the Trust Protocol to 1 million
+                daily active signals.</p>
+            <div class="reveal delay-3" style="margin-top: 4rem;">
+                <p style="color: #fff; font-weight: 600;">invest@opskl.io | Terminal: OPSKL.BHARAT</p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const deck = document.getElementById('deck');
+        const nav = document.getElementById('nav');
+        const sections = document.querySelectorAll('section');
+
+        // Nav dots logic
+        sections.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.onclick = () => sections[i].scrollIntoView({ behavior: 'smooth' });
+            nav.appendChild(dot);
+        });
+
+        const dots = document.querySelectorAll('.nav-dot');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const idx = [...sections].indexOf(entry.target);
+                    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+                    sections.forEach(s => s.classList.remove('active'));
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.5 });
+
+        sections.forEach(s => observer.observe(s));
+
+        // Smooth key nav
+        window.onkeydown = e => {
+            const current = Math.round(deck.scrollTop / window.innerHeight);
+            if (e.key === 'ArrowDown' && current < sections.length - 1) sections[current + 1].scrollIntoView();
+            if (e.key === 'ArrowUp' && current > 0) sections[current - 1].scrollIntoView();
+        }
+    </script>
+</body>
+
+</html>
