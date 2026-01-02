@@ -15,17 +15,10 @@ interface ErrorReport {
 class ErrorMonitor {
     private enabled: boolean = !__DEV__;
 
-    captureError(error: any, context?: Record<string, any>) {
-        const report: ErrorReport = {
-            message: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            context,
-            timestamp: new Date().toISOString(),
-            level: 'error',
-        };
+    captureError(_error: any, _context?: Record<string, any>) {
+
 
         if (__DEV__) {
-            console.error('[ErrorMonitor] Caught Error:', report);
         }
 
         if (!this.enabled) return;
@@ -33,17 +26,15 @@ class ErrorMonitor {
         // In production, this ships to Sentry/Bugsnag
     }
 
-    captureMessage(message: string, level: ErrorReport['level'] = 'info', context?: Record<string, any>) {
+    captureMessage(_message: string, _level: ErrorReport['level'] = 'info', _context?: Record<string, any>) {
         if (__DEV__) {
-            console.log(`[ErrorMonitor] Message (${level}):`, message, context || '');
         }
 
         if (!this.enabled) return;
     }
 
-    addBreadcrumb(message: string, data?: Record<string, any>) {
+    addBreadcrumb(_message: string, _data?: Record<string, any>) {
         if (__DEV__) {
-            console.log(`[ErrorMonitor] Breadcrumb: ${message}`, data || '');
         }
     }
 

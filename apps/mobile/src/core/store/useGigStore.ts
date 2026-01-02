@@ -15,7 +15,7 @@ interface GigState {
     searchLoading: boolean;
     searchError: string | null;
 
-    // My Gigs (Client/Worker Dashboard)
+    // My Gigs (Client/Talent Dashboard)
     myGigs: Gig[];
     myGigsLoading: boolean;
     myGigsError: string | null;
@@ -101,42 +101,65 @@ export const useGigStore = create<GigState>()(
         },
 
         searchGigsAI: async (query: string) => {
+            const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+            
             set((state) => { 
                 state.searchLoading = true; 
                 state.searchError = null; 
-                state.searchResult = []; // Clear previous
+                state.searchResult = []; 
             });
             
             try {
-                // 🔒 SECURE: Key stays on server. Call Edge Function.
-                const { data, error } = await supabase.functions.invoke('search-gigs', {
-                    body: { query }
+                let analysis = { category: null, keywords: query };
+
+                // 🧠 SEMANTIC ANALYSIS (GEMINI POWERED)
+                if (GEMINI_API_KEY) {
+                    try {
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{
+                                        text: `Analyze this search query for a gig-economy platform: "${query}". 
+                                        Valid categories: Social, Creative, Technical, Design, Visuals, Intel, Logistics, Signal.
+                                        Return a JSON object with: { "category": string | null, "keywords": string }. 
+                                        Keywords should be the most important search terms. Return ONLY JSON.`
+                                    }]
+                                }]
+                            })
+                        });
+                        const data = await response.json();
+                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        const cleanedJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                        analysis = JSON.parse(cleanedJson);
+                    } catch (aiError) {
+                        if (__DEV__) console.error(aiError);
+                        console.error('AI description error:', aiError);
+                    }
+                }
+
+                // 🔎 DATABASE EXECUTION
+                const { data, error } = await Repository.getGigs({
+                    title: analysis.keywords,
+                    category: analysis.category || undefined,
+                    status: 'open'
                 });
 
                 if (error) throw error;
-                if (!data.success) throw new Error(data.error || 'AI Search Failed');
 
                 set((state) => {
-                    state.searchResult = (data.gigs as Gig[]) || [];
+                    state.searchResult = (data as Gig[]) || [];
                     state.searchLoading = false;
                 });
 
-            } catch (err: any) {
-                console.warn('[GigStore] AI Search Function failed, falling back to basic:', err.message);
-                
-                // Fallback to basic text search
-                try {
-                     const { data } = await Repository.getGigs({ title: query, status: 'open' });
-                     set(state => {
-                         state.searchResult = (data as Gig[]) || [];
-                         state.searchLoading = false;
-                     });
-                } catch (fallbackErr: any) {
-                    set(state => {
-                        state.searchError = "Search unavailable. Secure lines down.";
-                        state.searchLoading = false;
-                    });
-                }
+            } catch (error) {
+            if (__DEV__) console.error(error);
+                console.error('Gig search error:', error);
+                set(state => {
+                    state.searchError = "Search frequency unstable. Check connection.";
+                    state.searchLoading = false;
+                });
             }
         },
 

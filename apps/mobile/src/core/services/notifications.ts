@@ -24,7 +24,6 @@ export const NotificationService = {
      */
     async registerForPushNotificationsAsync() {
         if (!Device.isDevice) {
-            console.warn('[NotificationService] Physical device required for push');
             return null;
         }
 
@@ -48,7 +47,6 @@ export const NotificationService = {
         }
 
         if (finalStatus !== 'granted') {
-            console.warn('[NotificationService] Permission not granted');
             return null;
         }
 
@@ -68,8 +66,9 @@ export const NotificationService = {
                     .update({ push_token: token })
                     .eq('id', user.id);
             }
-        } catch (e) {
-            console.error('[NotificationService] Token retrieval failed:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            console.error('Push notification registration error:', error);
         }
 
         return token;

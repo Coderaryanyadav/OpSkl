@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { supabase } from '@api/supabase';
+import { Repository } from '@api/repository';
 import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
@@ -17,7 +17,7 @@ export default function VerificationScreen() {
     const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
     const { user } = useAuth();
-    const { showDialog, showToast } = useAura();
+    const { showDialog, showToast, refreshData } = useAura();
     const [idFront, setIdFront] = useState<string | null>(null);
     const [idBack, setIdBack] = useState<string | null>(null);
     const [selfie, setSelfie] = useState<string | null>(null);
@@ -49,20 +49,23 @@ export default function VerificationScreen() {
         try {
             if (!user) throw new Error("No active session detected.");
 
-            const { error } = await supabase.from('profiles').update({
-                verification_status: 'pending',
-                metadata: {
-                    verification_submitted_at: new Date().toISOString()
-                }
-            }).eq('id', user.id);
+            // Initiate Secure Identity Gate (Server-authoritative elevation)
+            const { error: verifyError } = await Repository.verifyIdentity(
+                user.id,
+                idFront,
+                idBack,
+                selfie
+            );
 
-            if (error) throw error;
+            if (verifyError) throw verifyError;
+
+            await refreshData();
 
             haptics.success();
             showDialog({
-                title: 'Verification Submitted',
-                message: "Your identity documents have been encrypted and queued for manual compliance audit. Completion expected: 12-24h.",
-                primaryLabel: 'CLOSE',
+                title: 'Clearance Activated',
+                message: "Aadhaar e-KYC Bridge successfully established. You have been elevated to CLEARANCE LEVEL 1. High-priority missions are now visible.",
+                primaryLabel: 'PROCEED',
                 onConfirm: () => navigation.goBack()
             });
         } catch (e: any) {
@@ -147,7 +150,7 @@ export default function VerificationScreen() {
                 <AuraMotion type="slide" delay={500} style={styles.securityWarning}>
                     <AlertCircle size={20} color={AuraColors.gray700} />
                     <AuraText variant="caption" color={AuraColors.gray700} style={{ marginLeft: 16, flex: 1, lineHeight: 16 }}>
-                        Data is transmitted via AES-256 encrypted tunnels. Temporary tokens are purged after compliance audit.
+                        Data is transmitted via AES-256 encrypted tunnels. Temporary tokens are securely cleared after compliance audit.
                     </AuraText>
                 </AuraMotion>
 
@@ -252,9 +255,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: 40,
-        padding: 24,
+        padding: AuraSpacing.xl,
         backgroundColor: AuraColors.surface,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         borderWidth: 1,
         borderColor: AuraColors.gray200,
     },

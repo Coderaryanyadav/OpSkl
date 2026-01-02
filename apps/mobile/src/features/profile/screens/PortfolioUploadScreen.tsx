@@ -17,7 +17,7 @@ import { Upload, Plus, X, Image as ImageIcon } from 'lucide-react-native';
 export default function PortfolioUploadScreen() {
     const haptics = useAuraHaptics();
     const navigation = useNavigation();
-    const { showDialog, showToast } = useAura();
+    const { showToast } = useAura();
     const { user } = useAuth();
 
     // State
@@ -49,7 +49,7 @@ export default function PortfolioUploadScreen() {
     const handleUpload = async () => {
         if (!title.trim() || !imageUrl) {
             haptics.error();
-            showToast({ message: "Title and Image are required.", type: 'error' });
+            showToast({ message: "Parameters incomplete. Project designation and asset required.", type: 'error' });
             return;
         }
 
@@ -57,28 +57,34 @@ export default function PortfolioUploadScreen() {
         haptics.heavy();
 
         try {
-            if (!user) throw new Error("Authentication missing.");
+            if (!user) throw new Error("Authentication node offline.");
 
-            // In a real app we'd upload the image file to Supabase Storage first.
-            // For this MVP, we will use the local URI or a placeholder if it's local.
-            // WARNING: Local URIs won't work across devices. 
-            // Ideally, we need a storage bucket. 
-            // Assuming for now the ImagePicker URI is just passed or we mock the upload.
+            // Initiate Pulse Transmission (Upload to Storage)
+            const fileExt = imageUrl.split('.').pop() || 'jpg';
+            const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-            // NOTE TO USER: This saves the URI. Production requires Supabase Storage implementation.
+            const { data: publicUrl, error: uploadError } = await Repository.uploadFile(
+                'portfolio',
+                fileName,
+                imageUrl
+            );
 
-            const { error } = await Repository.addPortfolioItem({
+            if (uploadError) throw new Error(`Vault Transmission Refused: ${uploadError.message}`);
+            if (!publicUrl) throw new Error("Asset retrieval failed during sync.");
+
+            // Index Metadata in Global Signal
+            const { error: indexError } = await Repository.addPortfolioItem({
                 user_id: user.id,
-                title,
-                description,
-                image_url: imageUrl, // TODO: Replace with Storage URL
+                title: title.trim(),
+                description: description.trim(),
+                image_url: publicUrl,
                 link_url: linkUrl || null
             });
 
-            if (error) throw new Error(error.message);
+            if (indexError) throw new Error(`Meta-indexing Failed: ${indexError.message}`);
 
             haptics.success();
-            showToast({ message: "Portfolio Asset Securely Indexed", type: 'success' });
+            showToast({ message: "Portfolio Asset Securely Indexed in Vault", type: 'success' });
             navigation.goBack();
 
         } catch (error: any) {

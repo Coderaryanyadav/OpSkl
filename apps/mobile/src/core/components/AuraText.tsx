@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TextProps } from 'react-native';
-import { AuraColors, AuraTypography } from '../theme/aura';
+import { AuraTypography } from '../theme/aura';
 
 interface AuraTextProps extends TextProps {
     variant?: keyof typeof AuraTypography;
@@ -20,9 +20,7 @@ export const AuraText: React.FC<AuraTextProps> = ({
     ...props
 }) => {
     // Default colors based on variant
-    const defaultColor = (variant as string) === 'caption' || (variant as string) === 'label'
-        ? AuraColors.gray400
-        : AuraColors.white;
+
 
     return (
         <Text

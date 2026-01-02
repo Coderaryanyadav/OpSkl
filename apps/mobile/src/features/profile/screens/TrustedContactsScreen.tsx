@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { AuraHeader } from '@core/components/AuraHeader';
-import { supabase } from '@api/supabase';
+import { Repository } from '@api/repository';
 import { AuraText } from '@core/components/AuraText';
 import { AuraButton } from '@core/components/AuraButton';
 import { AuraInput } from '@core/components/AuraInput';
@@ -29,25 +29,22 @@ export default function TrustedContactsScreen() {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [adding, setAdding] = useState(false);
-    const [loading, setLoading] = useState(true);
 
     const fetchContacts = useCallback(async () => {
         if (!user) return;
         try {
-            const { data, error } = await supabase
-                .from('trusted_contacts')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
+            const { data, error } = await Repository.getTrustedContacts(user.id);
 
             if (error) throw error;
             setContacts(data || []);
-        } catch (e: any) {
-            console.error("Fetch contacts error:", e);
-        } finally {
-            setLoading(false);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to remove contact. Please try again.',
+                type: 'error'
+            });
         }
-    }, [user]);
+    }, [user, showToast]);
 
     useEffect(() => {
         fetchContacts();
@@ -63,11 +60,11 @@ export default function TrustedContactsScreen() {
         try {
             if (!user) return;
 
-            const { data, error } = await supabase.from('trusted_contacts').insert({
+            const { data, error } = await Repository.addTrustedContact({
                 user_id: user.id,
                 name: name.trim(),
                 phone: phone.trim()
-            }).select().single();
+            });
 
             if (error) throw error;
 
@@ -90,11 +87,17 @@ export default function TrustedContactsScreen() {
     const removeContact = async (id: string) => {
         haptics.medium();
         try {
-            const { error } = await supabase.from('trusted_contacts').delete().eq('id', id);
+            const { error } = await Repository.deleteTrustedContact(id);
             if (error) throw error;
             setContacts(prev => prev.filter(c => c.id !== id));
             showToast({ message: "Uplink Terminated", type: 'info' });
-        } catch (e: any) {
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to load trusted contacts.',
+                type: 'error'
+            });
+        } finally {
             showToast({ message: "Protocol Breach: Termination failed.", type: 'error' });
         }
     };
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
     heroCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 24,
+        padding: AuraSpacing.xl,
         backgroundColor: AuraColors.surface,
         borderRadius: 32,
         borderWidth: 1.5,
@@ -252,7 +255,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 24,
+        padding: AuraSpacing.xl,
         backgroundColor: AuraColors.surface,
         borderRadius: 32,
         marginBottom: 16,
@@ -267,7 +270,7 @@ const styles = StyleSheet.create({
     avatarPlaceholder: {
         width: 52,
         height: 52,
-        borderRadius: 18,
+        borderRadius: AuraBorderRadius.l,
         backgroundColor: AuraColors.surfaceLight,
         alignItems: 'center',
         justifyContent: 'center',
@@ -329,7 +332,7 @@ const styles = StyleSheet.create({
     fab: {
         width: 72,
         height: 72,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         backgroundColor: AuraColors.white,
         alignItems: 'center',
         justifyContent: 'center',

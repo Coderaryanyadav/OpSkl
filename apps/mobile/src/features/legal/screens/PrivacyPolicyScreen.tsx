@@ -23,7 +23,7 @@ export default function PrivacyPolicyScreen() {
                     <View style={styles.section}>
                         <AuraText variant="bodyBold" style={{ marginBottom: 8 }}>2. ENCRYPTION PROTOCOLS</AuraText>
                         <AuraText variant="body" color={AuraColors.gray500}>
-                            All communications and documents are processed through end-to-end encrypted channels. Identity verification data is purged post-validation.
+                            All communications and documents are processed through end-to-end encrypted channels. Identity verification data is securely cleared post-validation.
                         </AuraText>
                     </View>
 
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
         backgroundColor: AuraColors.background,
     },
     content: {
-        padding: 24,
+        padding: AuraSpacing.xl,
         paddingBottom: 60,
     },
     section: {

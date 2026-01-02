@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, Dimensions, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Switch, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { supabase } from '@api/supabase';
 import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
@@ -11,24 +11,23 @@ import { AuraLoader } from '@core/components/AuraLoader';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuth } from '@context/AuthProvider';
-import { useUserStore } from '@store/useUserStore';
+import { Repository } from '@api/repository';
 import { useNavigation } from '@react-navigation/native';
 import { Settings, Zap, Shield, Wallet, Crown, LogOut, ChevronRight, Verified, Repeat, Star, Briefcase, Plus } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+
 
 export default function ProfileScreen() {
     const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
-    const { showDialog, showToast } = useAura();
-    const { xp, level } = useUserStore();
+    const { showToast, showDialog, refreshData, reputationPoints, clearanceLevel } = useAura();
     const { user, profile, loading: authLoading } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
     const [isGhostMode, setIsGhostMode] = useState(false);
     const [switchingRole, setSwitchingRole] = useState(false);
 
-    const nextLevelXp = level * 1000;
-    const progress = (xp % 1000) / 1000;
+    const nextLevelReputation = clearanceLevel * 1000;
+    const progress = (reputationPoints % 1000) / 1000;
 
     useEffect(() => {
         if (profile) {
@@ -39,7 +38,7 @@ export default function ProfileScreen() {
     const onRefresh = async () => {
         setRefreshing(true);
         haptics.medium();
-        // AuthProvider handles sync automatically on session check or we could expose a refresh method
+        await refreshData();
         setRefreshing(false);
     };
 
@@ -50,15 +49,15 @@ export default function ProfileScreen() {
         haptics.heavy();
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ active_role: newRole })
-                .eq('id', user.id);
-
-            if (error) throw error;
+            const { error: updateError } = await Repository.updateProfile(user.id, { active_role: newRole });
+            if (updateError) throw updateError;
             showToast({ message: `Switched to ${newRole.toUpperCase()} Mode`, type: 'success' });
-        } catch (e: any) {
-            showToast({ message: "Role Switch Failed", type: 'error' });
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to load profile. Please try again.',
+                type: 'error'
+            });
         } finally {
             setSwitchingRole(false);
         }
@@ -67,8 +66,8 @@ export default function ProfileScreen() {
     const handleLogout = () => {
         haptics.warning();
         showDialog({
-            title: 'Terminate Session',
-            message: 'Are you sure you want to end your secure deployment and logout?',
+            title: 'Sign Out',
+            message: 'Are you sure you want to sign out?',
             type: 'warning',
             onConfirm: async () => {
                 haptics.heavy();
@@ -122,13 +121,13 @@ export default function ProfileScreen() {
                         {profile?.full_name}
                     </AuraText>
                     <AuraText variant="bodyLarge" color={AuraColors.gray400} align="center">
-                        @{profile?.full_name?.split(' ')[0].toLowerCase() || 'operative'}
+                        @{profile?.full_name?.split(' ')[0].toLowerCase() || 'talent'}
                     </AuraText>
 
                     <View style={styles.rankContainer}>
                         <Crown size={14} color={AuraColors.primary} fill={AuraColors.primary} />
                         <AuraText variant="label" color={AuraColors.primary} style={styles.rankText}>
-                            LEVEL {level} • ELITE OPERATIVE
+                            LEVEL {clearanceLevel} • ELITE OPERATIVE
                         </AuraText>
                     </View>
                 </AuraMotion>
@@ -136,8 +135,13 @@ export default function ProfileScreen() {
                 {/* Performance HUD */}
                 <View style={styles.hudContainer}>
                     <View style={styles.hudStat}>
-                        <AuraText variant="h2">{profile?.total_count || 0}</AuraText>
-                        <AuraText variant="label" color={AuraColors.gray500}>MISSIONS</AuraText>
+                        <AuraText variant="h2">{clearanceLevel}</AuraText>
+                        <AuraText variant="label" color={AuraColors.gray600}>CLEARANCE</AuraText>
+                    </View>
+                    <View style={styles.hudDivider} />
+                    <View style={styles.hudStat}>
+                        <AuraText variant="h2">{reputationPoints}</AuraText>
+                        <AuraText variant="label" color={AuraColors.gray600}>REPUTATION</AuraText>
                     </View>
                     <View style={styles.hudDivider} />
                     <View style={styles.hudStat}>
@@ -147,8 +151,8 @@ export default function ProfileScreen() {
                             </AuraText>
                             <Star size={16} color={AuraColors.warning} fill={AuraColors.warning} />
                         </View>
-                        <AuraText variant="label" color={AuraColors.gray500}>
-                            {profile?.review_count || 0} REVIEWS
+                        <AuraText variant="caption" color={AuraColors.gray600} style={{ marginTop: 8 }}>
+                            {reputationPoints} / {nextLevelReputation} RP UNTIL NEXT CLEARANCE
                         </AuraText>
                     </View>
                     <View style={styles.hudDivider} />
@@ -161,8 +165,8 @@ export default function ProfileScreen() {
                 {/* Level Progress */}
                 <View style={styles.xpSection}>
                     <View style={styles.xpHeader}>
-                        <AuraText variant="label" color={AuraColors.gray500}>EXPERIENCE GAIN</AuraText>
-                        <AuraText variant="label" color={AuraColors.white}>{xp} / {nextLevelXp} XP</AuraText>
+                        <AuraText variant="label" color={AuraColors.gray500}>REPUTATION GAIN</AuraText>
+                        <AuraText variant="label" color={AuraColors.white}>{reputationPoints} / {nextLevelReputation} RP</AuraText>
                     </View>
                     <View style={styles.xpBarContainer}>
                         <View style={[styles.xpBarFill, { width: `${progress * 100}%` }]} />
@@ -250,7 +254,7 @@ export default function ProfileScreen() {
                 {/* Final Actions */}
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <LogOut size={20} color={AuraColors.error} />
-                    <AuraText variant="bodyBold" color={AuraColors.error}>TERMINATE SESSION</AuraText>
+                    <AuraText variant="bodyBold" color={AuraColors.error}>SIGN OUT</AuraText>
                 </TouchableOpacity>
 
                 <AuraText variant="caption" align="center" color={AuraColors.gray700} style={styles.versionText}>
@@ -284,7 +288,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         right: 0,
         backgroundColor: AuraColors.background,
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
         padding: 2,
     },
     name: {
@@ -296,8 +300,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: AuraColors.surfaceElevated,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: AuraSpacing.l,
+        paddingVertical: AuraSpacing.s,
         borderRadius: 20,
         marginTop: 20,
         borderWidth: 1,
@@ -363,7 +367,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 16,
+        padding: AuraSpacing.l,
         backgroundColor: AuraColors.surfaceElevated,
         borderRadius: AuraBorderRadius.xl,
         marginBottom: 12,

@@ -6,7 +6,7 @@ import { AuraButton } from '@core/components/AuraButton';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { Zap, Check, X, Bell } from 'lucide-react-native';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface OnboardingOverlayProps {
     onComplete: () => void;
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
         width: width * 0.85,
         backgroundColor: AuraColors.surfaceElevated,
         borderRadius: 32,
-        padding: 32,
+        padding: AuraSpacing.xxl,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: AuraColors.gray800,
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     },
     desc: {
         lineHeight: 24,
-        paddingHorizontal: 8,
+        paddingHorizontal: AuraSpacing.s,
     },
     dots: {
         flexDirection: 'row',

@@ -18,9 +18,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.opskl.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "OpSkl needs camera access to verify your identity and jobs.",
-        "NSPhotoLibraryUsageDescription": "OpSkl needs photo access to upload identity documents.",
-        "NSLocationWhenInUseUsageDescription": "OpSkl needs your location to show available gigs near you."
+        "NSFaceIDUsageDescription": "OpSkl uses FaceID to securely authenticate your high-value wallet transactions.",
+        "NSCameraUsageDescription": "Capture proof of work and verify your identity for mission clearance.",
+        "NSPhotoLibraryUsageDescription": "Upload existing portfolio items and documents for verification.",
+        "NSLocationWhenInUseUsageDescription": "Locate high-value missions in your immediate vicinity."
       }
     },
     "android": {

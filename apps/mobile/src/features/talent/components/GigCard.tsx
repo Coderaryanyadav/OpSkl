@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { AuraColors } from '@theme/aura';
@@ -7,7 +7,7 @@ import { AuraText } from '@core/components/AuraText';
 import { MapPin, Clock, Zap, Info } from 'lucide-react-native';
 import { Gig } from '@types';
 
-const { width } = Dimensions.get('window');
+
 
 interface GigCardProps {
     gig: Gig;
@@ -31,7 +31,7 @@ const GigCard: React.FC<GigCardProps> = ({ gig, onPress }) => {
     const handlePress = () => {
         if (onPress) {
             onPress();
-        } else if (gig.status === 'active' && gig.assigned_worker_id) {
+        } else if (gig.status === 'active' && gig.assigned_talent_id) {
             navigation.navigate('GigDetails', { gigId: gig.id });
         }
     };
@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
         backgroundColor: 'rgba(255,255,255,0.03)',
-        paddingHorizontal: 12,
+        paddingHorizontal: AuraSpacing.m,
         paddingVertical: 6,
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
     },
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     priorityBadge: {
         paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 8,
+        borderRadius: AuraBorderRadius.s,
     },
     content: {
         marginTop: 20,

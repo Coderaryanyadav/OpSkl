@@ -9,7 +9,6 @@ import { AuraLoader } from '@core/components/AuraLoader';
 import { AuraBadge } from '@core/components/AuraBadge';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { AuraButton } from '@core/components/AuraButton';
-import { useAura } from '@core/context/AuraProvider';
 import { useAuth } from '@context/AuthProvider';
 import { useGigStore } from '@store/useGigStore';
 import { useNavigation } from '@react-navigation/native';
@@ -18,7 +17,7 @@ import { Users, ChevronRight, Briefcase, Activity, Plus, Target } from 'lucide-r
 export default function ClientManageGigsScreen() {
     const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
-    const { showToast } = useAura();
+
     const { user } = useAuth();
     const { myGigs, loading, fetchMyGigs } = useGigStore();
     const [refreshing, setRefreshing] = useState(false);
@@ -37,7 +36,7 @@ export default function ClientManageGigsScreen() {
 
             return () => { supabase.removeChannel(channel); };
         }
-    }, [user, fetchMyGigs]);
+    }, [user, fetchMyGigs, haptics]);
 
     const onRefresh = async () => {
         if (!user) return;

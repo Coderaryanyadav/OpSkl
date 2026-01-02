@@ -42,8 +42,9 @@ export const NetworkService = {
                 timestamp: new Date().toISOString()
             });
             await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
-        } catch (e) {
-            console.error('[NetworkService] Queue Error:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            console.error('Sync signal enqueue error:', error);
         }
     },
 
@@ -71,8 +72,9 @@ export const NetworkService = {
                     });
                 }
                 // (Extend for other types)
-            } catch (e) {
-                console.warn('[NetworkService] Re-sync individual op failure:', e);
+            } catch (error) {
+            if (__DEV__) console.error(error);
+                console.error('Sync queue process error:', error);
                 continue;
             }
         }

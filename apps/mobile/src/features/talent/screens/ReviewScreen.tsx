@@ -12,14 +12,13 @@ import { useAuth } from '@context/AuthProvider';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Repository } from '@api/repository';
-import { supabase } from '@api/supabase'; // Import supabase for gig update
 
 export default function ReviewScreen() {
     const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const { user } = useAuth();
-    const { showDialog, showToast } = useAura();
+    const { showDialog, showToast, addReputation } = useAura();
     const { gigId, targetUserId, targetUserName = 'Personnel' } = route.params || {};
 
     const [rating, setRating] = useState(0);
@@ -29,7 +28,7 @@ export default function ReviewScreen() {
     const handleRatingSelect = useCallback((val: number) => {
         haptics.medium();
         setRating(val);
-    }, []);
+    }, [haptics]);
 
     const handleSubmit = async () => {
         if (rating === 0) {
@@ -54,13 +53,12 @@ export default function ReviewScreen() {
 
             if (reviewError) throw new Error(reviewError.message);
 
-            const { error: updateError } = await supabase
-                .from('gigs')
-                .update({ status: 'completed' })
-                .eq('id', gigId);
+            const { error: updateError } = await Repository.updateGig(gigId, { status: 'completed' });
 
             if (updateError) throw updateError;
 
+            addReputation(300); // REPUTATION reward for completing evaluation
+            showToast({ message: "Evaluation submitted successfully!", type: 'success' });
             haptics.success();
             showDialog({
                 title: 'Evaluation Recorded',
@@ -190,7 +188,7 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     starBtn: {
-        padding: 8,
+        padding: AuraSpacing.s,
     },
     commentSection: {
         marginTop: 48,

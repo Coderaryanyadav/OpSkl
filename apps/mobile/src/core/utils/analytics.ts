@@ -26,10 +26,10 @@ export const Analytics = {
 
             if (error) {
                 // Fail silently in prod, log in dev
-                console.warn('[Analytics] Failed to log:', error.message);
             }
-        } catch (e) {
-            console.warn('[Analytics] Error:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            console.error('Analytics track error:', error);
         }
     }
 };

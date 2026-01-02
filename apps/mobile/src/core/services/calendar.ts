@@ -1,3 +1,4 @@
+// @ts-ignore
 import * as Calendar from 'expo-calendar';
 import { Platform } from 'react-native';
 
@@ -9,13 +10,13 @@ import { Platform } from 'react-native';
 export const CalendarService = {
     async getDefaultCalendarSource() {
         const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-        const defaultCalendars = calendars.filter(each => each.source.name === 'Default');
-        return defaultCalendars.length ? defaultCalendars[0].source : calendars[0].source;
+        const defaultCalendar = calendars.find((c: any) => c.source.name === 'Default');
+        return defaultCalendar ? defaultCalendar.source : (calendars.length ? calendars[0].source : null);
     },
 
     async createCalendar() {
         const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-        const editable = calendars.find(c => c.allowsModifications);
+        const editable = calendars.find((c: any) => c.allowsModifications);
 
         if (editable) return editable.id;
 
@@ -52,8 +53,9 @@ export const CalendarService = {
                 alarms: [{ relativeOffset: -60 }]
             });
             return true;
-        } catch (e) {
-            console.warn('[CalendarService] Entry Error:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            console.error('Calendar event add error:', error);
             return false;
         }
     }

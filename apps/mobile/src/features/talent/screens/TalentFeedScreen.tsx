@@ -19,7 +19,7 @@ import { useAuth } from '@context/AuthProvider';
 import { useGigStore } from '@store/useGigStore';
 import { Repository } from '@api/repository';
 import GigCard from '../components/GigCard';
-import { Search, Sparkles, Filter, X, Check } from 'lucide-react-native';
+import { Search, Sparkles, Filter, X, Check, AlertTriangle, MapPin } from 'lucide-react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Gig } from '@types';
 
@@ -47,8 +47,8 @@ import FilterModal from '../components/FilterModal';
 
 // ... (imports)
 
-export default function WorkerFeedScreen() {
-    const { showToast } = useAura();
+export default function TalentFeedScreen() {
+    const { showToast, showDialog, addReputation, currentLocation, sendSOS } = useAura();
     const { user } = useAuth();
     const {
         gigs: feedGigs,
@@ -63,11 +63,34 @@ export default function WorkerFeedScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isAiSearch, setIsAiSearch] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
+    const [manualLocation, setManualLocation] = useState<string | null>(null);
 
     useEffect(() => {
         checkTutorial();
-        fetchGigs();
-    }, [fetchGigs]);
+        const refreshFeed = async () => {
+            if (currentLocation) {
+                fetchGigs({ lat: currentLocation.lat, lng: currentLocation.lng, radius: 20 });
+            } else if (manualLocation) {
+                fetchGigs({ title: manualLocation }); // Fallback to city-wide search
+            } else {
+                fetchGigs();
+            }
+        };
+        refreshFeed();
+    }, [fetchGigs, currentLocation, manualLocation]);
+
+    const handleManualOverride = () => {
+        showDialog({
+            title: "Manual Signal Lock",
+            message: "GPS Signal is weak. Lock coordinates to your current city to proceed with discovery.",
+            primaryLabel: "Update Location",
+            onConfirm: () => {
+                // In a real app, this would open a city picker
+                setManualLocation("Bangalore");
+                showToast({ message: "Signal Locked: Bangalore Node Active", type: 'success' });
+            }
+        });
+    };
 
     const checkTutorial = async () => {
         const hasSeen = await AsyncStorage.getItem('hasSeenSwipeTutorial');
@@ -91,35 +114,42 @@ export default function WorkerFeedScreen() {
         setCurrentIndex(0);
     }, [searchResult]);
 
-    // ... (Swipe logic omitted, same as before)
-    // Re-create swipe handlers here if replacing full function or just inject loader above return
-    // Since I must replace the whole function to insert the loader cleanly at root:
-
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
 
-    const handleSwipeComplete = async (direction: 'left' | 'right') => {
+    const handleSwipeComplete = async (direction: 'right' | 'left') => {
         const currentGig = localGigs[currentIndex];
         if (!currentGig) return;
 
         if (direction === 'right') {
-            haptics.success();
+            // Apply to Gig
+            haptics.heavy();
+            try {
+                if (!user) throw new Error("Authentication failure.");
 
-            if (user) {
-                const { error } = await Repository.applyToGig(currentGig.id, user.id);
-                if (error) {
-                    showToast({ message: `Application Failed: ${error.message}`, type: 'error' });
-                } else {
-                    showToast({ message: 'Applied Successfully!', type: 'success' });
-                }
+                const { error } = await Repository.applyToGig(currentGig.id, user.id, "Talent applying via rapid deployment signal.");
+                if (error) throw error;
+
+                showToast({ message: "MISSION APPLICATION TRANSMITTED", type: 'success' });
+                addReputation(50); // Small reward for rapid applying
+            } catch (e: any) {
+                showToast({ message: e.message || "Transmission Failure", type: 'error' });
             }
         } else {
-            haptics.medium();
+            haptics.light();
+            showToast({ message: "MISSION DISMISSED", type: 'info' });
+        }
+
+        // Move to next card
+        if (currentIndex < localGigs.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+        } else {
+            // End of feed
+            setCurrentIndex(localGigs.length);
         }
 
         translateX.value = 0;
         translateY.value = 0;
-        setCurrentIndex(prev => prev + 1);
     };
 
     const gesture = Gesture.Pan()
@@ -181,16 +211,18 @@ export default function WorkerFeedScreen() {
         };
     });
 
-    const handleSearch = () => {
+    const onSearch = async () => {
         if (!searchQuery.trim()) {
             clearSearch();
             return;
         }
 
+        haptics.medium();
         if (isAiSearch) {
-            searchGigsAI(searchQuery);
+            await searchGigsAI(searchQuery);
         } else {
-            searchGigsAI(searchQuery);
+            // Simple keyword search could be added here or just use AI
+            await searchGigsAI(searchQuery);
         }
     };
 
@@ -240,7 +272,7 @@ export default function WorkerFeedScreen() {
                         placeholder={isAiSearch ? "Describe what you want..." : "Search missions..."}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        onSubmitEditing={handleSearch}
+                        onSubmitEditing={onSearch}
                         returnKeyType="search"
                         leftIcon={<Search size={18} color={AuraColors.gray500} />}
                         containerStyle={styles.searchBar}
@@ -264,6 +296,20 @@ export default function WorkerFeedScreen() {
                 >
                     <Filter size={20} color={Object.keys(activeFilters).length > 0 ? AuraColors.white : AuraColors.gray400} />
                 </TouchableOpacity>
+
+                {/* Street-Grade Fallback Node */}
+                {!currentLocation && (
+                    <TouchableOpacity
+                        style={[styles.fallbackNode]}
+                        onPress={handleManualOverride}
+                        activeOpacity={0.7}
+                    >
+                        <MapPin size={14} color={manualLocation ? AuraColors.primary : AuraColors.warning} />
+                        <AuraText variant="caption" color={manualLocation ? AuraColors.primary : AuraColors.warning} style={{ marginLeft: 6, fontWeight: '800' }}>
+                            {manualLocation ? `LOCKED: ${manualLocation}` : "SIGNAL WEAK: OVERRIDE"}
+                        </AuraText>
+                    </TouchableOpacity>
+                )}
             </View>
 
             {currentIndex >= localGigs.length ? (
@@ -313,6 +359,14 @@ export default function WorkerFeedScreen() {
             {/* Controls only show if cards exist */}
             {currentIndex < localGigs.length && (
                 <View style={styles.controls}>
+                    {/* SOS Floating Node */}
+                    <AuraMotion type="slide" delay={800} style={styles.sosContainer}>
+                        <TouchableOpacity style={styles.sosBtn} onPress={sendSOS} activeOpacity={0.7}>
+                            <AlertTriangle size={24} color={AuraColors.white} />
+                            <AuraText variant="caption" color={AuraColors.white} style={{ fontWeight: '900', marginLeft: 8 }}>SOS</AuraText>
+                        </TouchableOpacity>
+                    </AuraMotion>
+
                     <TouchableOpacity
                         style={styles.controlBtn}
                         onPress={() => {
@@ -354,9 +408,19 @@ const styles = StyleSheet.create({
         paddingHorizontal: AuraSpacing.xl,
         paddingTop: 12,
         zIndex: 10,
-        flexDirection: 'row', // Added for horizontal layout
-        alignItems: 'center', // Added for vertical alignment
-        gap: 12, // Added for spacing between search input and filter button
+        flexDirection: 'column', // Changed to column to accommodate fallback
+        gap: 12,
+    },
+    fallbackNode: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: AuraColors.surfaceElevated,
+        paddingHorizontal: AuraSpacing.m,
+        paddingVertical: AuraSpacing.s,
+        borderRadius: AuraBorderRadius.m,
+        borderWidth: 1,
+        borderColor: AuraColors.gray800,
+        alignSelf: 'flex-start',
     },
     searchInputWrapper: {
         flex: 1,
@@ -368,7 +432,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         backgroundColor: AuraColors.surfaceElevated,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
@@ -401,7 +465,7 @@ const styles = StyleSheet.create({
     cardStack: {
         flex: 1,
         marginTop: 24,
-        paddingHorizontal: 16,
+        paddingHorizontal: AuraSpacing.l,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -471,10 +535,27 @@ const styles = StyleSheet.create({
     refreshBtn: {
         marginTop: 40,
         paddingHorizontal: 24,
-        paddingVertical: 12,
+        paddingVertical: AuraSpacing.m,
         borderRadius: 20,
         backgroundColor: 'rgba(0, 122, 255, 0.1)',
         borderWidth: 1,
         borderColor: 'rgba(0, 122, 255, 0.2)',
+    },
+    sosContainer: {
+        position: 'absolute',
+        top: -100,
+        alignSelf: 'center',
+        zIndex: 100,
+    },
+    sosBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: AuraColors.error,
+        paddingHorizontal: 24,
+        paddingVertical: AuraSpacing.m,
+        borderRadius: AuraBorderRadius.xl,
+        ...AuraShadows.floating,
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
     }
 });

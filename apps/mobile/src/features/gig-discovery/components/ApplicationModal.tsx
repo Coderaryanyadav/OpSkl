@@ -34,8 +34,9 @@ export const ApplicationModal: React.FC<ApplicationModalProps> = ({ visible, onC
         try {
             const stored = await AsyncStorage.getItem(TEMPLATES_KEY);
             if (stored) setTemplates(JSON.parse(stored));
-        } catch (e) {
-            console.error('Failed to load templates');
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            // Templates failed to load, user can still apply manually
         }
     };
 
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: AuraColors.surface,
-        paddingHorizontal: 12,
+        paddingHorizontal: AuraSpacing.m,
         paddingVertical: 6,
         borderRadius: 20,
         borderWidth: 1,
@@ -162,8 +163,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginTop: 16,
-        padding: 12,
+        padding: AuraSpacing.m,
         backgroundColor: AuraColors.surface,
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
     }
 });

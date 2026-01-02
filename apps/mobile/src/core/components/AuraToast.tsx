@@ -2,11 +2,11 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { AuraColors, AuraShadows, AuraBorderRadius } from '../theme/aura';
 import { AuraText } from './AuraText';
-import { CheckCircle, XCircle, Info } from 'lucide-react-native';
+import { CheckCircle, XCircle, Info, AlertTriangle } from 'lucide-react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, { FadeInUp, FadeOutUp, runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface AuraToastProps {
     message: string;
@@ -50,6 +50,7 @@ export const AuraToast: React.FC<AuraToastProps> = ({ message, type = 'info', vi
         switch (type) {
             case 'success': return <CheckCircle color={AuraColors.success} size={24} />;
             case 'error': return <XCircle color={AuraColors.error} size={24} />;
+            case 'warning': return <AlertTriangle color={AuraColors.warning} size={24} />;
             default: return <Info color={AuraColors.info} size={24} />;
         }
     };
@@ -58,6 +59,7 @@ export const AuraToast: React.FC<AuraToastProps> = ({ message, type = 'info', vi
         switch (type) {
             case 'success': return AuraColors.success;
             case 'error': return AuraColors.error;
+            case 'warning': return AuraColors.warning;
             default: return AuraColors.primary;
         }
     };
@@ -67,7 +69,7 @@ export const AuraToast: React.FC<AuraToastProps> = ({ message, type = 'info', vi
             <Animated.View
                 entering={FadeInUp.springify()}
                 exiting={FadeOutUp}
-                style={[styles.container, { borderColor: getBorderColor() }, animatedStyle]}
+                style={[styles.container, { borderColor: getBorderColor() }, animatedStyle] as any}
             >
                 <View style={styles.icon}>{getIcon()}</View>
                 <AuraText variant="body" style={{ flex: 1 }}>{message}</AuraText>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../core/api/supabase';
-import { User } from '@supabase/supabase-js';
+import { supabase } from '@api/supabase';
+import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { UserRole, Profile } from '../types';
 
 interface AuthContextType {
@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
             if (session) {
                 setUser(session.user);
                 fetchProfile(session.user.id);
@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchProfile = async (userId: string) => {
         try {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', userId)
@@ -60,7 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setRole(data.active_role as UserRole);
             }
         } catch (error) {
-            console.error('[AuthProvider] Fetch profile failed:', error);
+            if (__DEV__) console.error(error);
+            console.error('Failed to fetch profile:', error);
         } finally {
             setLoading(false);
         }

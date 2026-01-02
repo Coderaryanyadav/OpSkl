@@ -61,7 +61,7 @@ export default function SignUpScreen() {
             } else if (data.user && !data.session) {
                 showDialog({
                     title: 'Verification Sent',
-                    message: 'Please check your email to verify your account and activate your operative node.',
+                    message: 'Please check your email to verify your account and activate your talent node.',
                     primaryLabel: 'Acknowledged',
                     onConfirm: () => navigation.navigate('Login')
                 });
@@ -71,7 +71,7 @@ export default function SignUpScreen() {
             secureLog('Signup error', error);
             showDialog({
                 title: 'Provisioning Failed',
-                message: error.message || 'An error occurred during operative enrollment.',
+                message: error.message || 'An error occurred during talent enrollment.',
                 primaryLabel: 'Retry',
                 onConfirm: () => { }
             });
@@ -169,9 +169,9 @@ const styles = StyleSheet.create({
         marginTop: 40,
     },
     errorBox: {
-        padding: 12,
+        padding: AuraSpacing.m,
         backgroundColor: 'rgba(255, 59, 48, 0.1)',
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
         borderWidth: 1,
         borderColor: 'rgba(255, 59, 48, 0.2)',
         marginTop: 20,

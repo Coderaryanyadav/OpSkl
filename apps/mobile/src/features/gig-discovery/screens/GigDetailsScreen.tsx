@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Share } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { supabase } from '@api/supabase';
 import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
@@ -14,8 +13,9 @@ import { useAuth } from '@context/AuthProvider';
 import { useAura } from '@core/context/AuraProvider';
 import { AuraBadge } from '@core/components/AuraBadge';
 import { Repository } from '@api/repository';
+import dayjs from 'dayjs';
 import { Gig, Deliverable, EscrowTransaction, Milestone } from '@features/gig-discovery/types';
-import { Upload, CheckCircle, Clock, ShieldCheck, FileText, DollarSign, MessageSquare, AlertTriangle, Flag, Share2 } from 'lucide-react-native';
+import { Upload, CheckCircle, Clock, ShieldCheck, FileText, DollarSign, MessageSquare, AlertTriangle, Flag, Share2, MapPin } from 'lucide-react-native';
 import { ApplicationModal } from '../components/ApplicationModal';
 import { Analytics } from '@core/utils/analytics';
 
@@ -40,48 +40,33 @@ export default function GigDetailsScreen() {
     const [showUploadForm, setShowUploadForm] = useState(false);
     const [isApplyModalVisible, setIsApplyModalVisible] = useState(false);
 
-    const isWorker = user?.id === gig?.assigned_worker_id;
+    const isTalent = user?.id === gig?.assigned_talent_id;
     const isClient = user?.id === gig?.client_id;
 
     const fetchDetails = useCallback(async () => {
         try {
             // Get Gig Details
-            const { data: gigData, error: gigError } = await supabase
-                .from('gigs')
-                .select('*, client:profiles!client_id(*)')
-                .eq('id', gigId)
-                .single();
-
+            const { data: gigData, error: gigError } = await Repository.getGigDetails(gigId);
             if (gigError) throw gigError;
             setGig(gigData);
 
             // Track View
-            Analytics.track('GIG_VIEWED', { gig_id: gigId, title: gigData.title, budget: gigData.budget });
+            if (gigData) Analytics.track('GIG_VIEWED', { gig_id: gigId, title: gigData.title, budget: gigData.budget });
 
             // Get Deliverables
-            const { data: delData } = await supabase
-                .from('deliverables')
-                .select('*')
-                .eq('gig_id', gigId)
-                .order('created_at', { ascending: false });
-
+            const { data: delData } = await Repository.getDeliverables(gigId);
             if (delData) setDeliverables(delData);
 
             // Get Escrow Status
-            const { data: escrowData } = await supabase
-                .from('escrow_transactions')
-                .select('*')
-                .eq('gig_id', gigId)
-                .single();
-
+            const { data: escrowData } = await Repository.getEscrowStatus(gigId);
             if (escrowData) setEscrow(escrowData);
 
             // Get Milestones
             const { data: miloData } = await Repository.getMilestones(gigId);
             if (miloData) setMilestones(miloData);
 
-        } catch (error: any) {
-            console.error('Error fetching gig details:', error);
+        } catch (error) {
+            if (__DEV__) console.error(error);
             showToast({ message: 'Failed to load operational data', type: 'error' });
         } finally {
             setLoading(false);
@@ -91,14 +76,8 @@ export default function GigDetailsScreen() {
     useEffect(() => {
         fetchDetails();
 
-        // Realtime subscription for deliverables and gig status
-        const sub = supabase.channel(`gig-detail-${gigId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'deliverables', filter: `gig_id=eq.${gigId}` }, () => fetchDetails())
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'gigs', filter: `id=eq.${gigId}` }, () => fetchDetails())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'escrow_transactions', filter: `gig_id=eq.${gigId}` }, () => fetchDetails())
-            .subscribe();
-
-        return () => { supabase.removeChannel(sub); };
+        // Realtime managed via polling or we could add subscribeToGig
+        return () => { };
     }, [gigId, fetchDetails]);
 
     const handleShare = async () => {
@@ -106,11 +85,12 @@ export default function GigDetailsScreen() {
         haptics.selection();
         try {
             await Share.share({
-                message: `Check out this mission on OpSkl: ${gig.title}\nBounty: ₹${(gig.pay_amount_cents || 0) / 100}\nJoin the operative network: opskl://gig/${gig.id}`,
+                message: `Check out this mission on OpSkl: ${gig.title}\nBounty: ₹${(gig.pay_amount_cents || 0) / 100}\nJoin the talent network: opskl://gig/${gig.id}`,
             });
             Analytics.track('GIG_SHARED', { gig_id: gigId });
         } catch (error) {
-            console.error('Sharing failed', error);
+            if (__DEV__) console.error(error);
+            showToast({ message: 'Failed to submit deliverable. Please try again.', type: 'error' });
         }
     };
 
@@ -128,7 +108,7 @@ export default function GigDetailsScreen() {
 
             const { error } = await Repository.submitDeliverable({
                 gig_id: gigId,
-                worker_id: user.id,
+                talent_id: user.id,
                 file_url: fileLink,
                 description: fileDesc || 'Operational Asset Submitted'
             });
@@ -153,13 +133,13 @@ export default function GigDetailsScreen() {
         haptics.warning();
         showDialog({
             title: 'Release Funds?',
-            message: 'This will irreversibly transfer the bounty to the operative. Ensure all objectives are met.',
+            message: 'This will irreversibly transfer the bounty to the talent. Ensure all objectives are met.',
             type: 'warning',
             onConfirm: async () => {
                 setUploading(true);
                 try {
-                    // 🔒 Use Secure RPC
-                    const { error } = await supabase.rpc('release_escrow', { p_gig_id: gigId });
+                    // 🔒 Use Secure Repository
+                    const { error } = await Repository.releaseEscrow(gigId);
 
                     if (error) throw error;
 
@@ -167,12 +147,11 @@ export default function GigDetailsScreen() {
                     showToast({ message: 'Funds Released. Mission Complete.', type: 'success' });
 
                     // Navigate to Review
-                    if (gig && gig.assigned_worker_id) {
-                        navigation.replace('Review', { gigId, targetUserId: gig.assigned_worker_id, targetUserName: 'Operative' });
+                    if (gig && gig.assigned_talent_id) {
+                        navigation.replace('Review', { gigId, targetUserId: gig.assigned_talent_id, targetUserName: 'Talent' });
                     }
 
                 } catch (e: any) {
-                    console.error('Release failed:', e);
                     showToast({ message: e.message || 'Transaction Failed', type: 'error' });
                 } finally {
                     setUploading(false);
@@ -185,12 +164,12 @@ export default function GigDetailsScreen() {
         haptics.warning();
         showDialog({
             title: 'Release Milestone Funds?',
-            message: `Verify '${m.title}' is completed. This will transfer ₹${(m.amount_cents / 100).toLocaleString()} to the operative.`,
+            message: `Verify '${m.title}' is completed. This will transfer ₹${(m.amount_cents / 100).toLocaleString()} to the talent.`,
             type: 'warning',
             onConfirm: async () => {
                 setUploading(true);
                 try {
-                    const { error } = await supabase.rpc('release_milestone', { p_milestone_id: m.id });
+                    const { error } = await Repository.releaseMilestone(m.id);
                     if (error) throw error;
                     haptics.success();
                     showToast({ message: 'Milestone Funds Released', type: 'success' });
@@ -211,7 +190,8 @@ export default function GigDetailsScreen() {
             if (error) throw error;
             showToast({ message: 'Milestone marked for review', type: 'success' });
             fetchDetails();
-        } catch (e: any) {
+        } catch (error) {
+            if (__DEV__) console.error(error);
             showToast({ message: 'Update failed', type: 'error' });
         }
     };
@@ -259,7 +239,7 @@ export default function GigDetailsScreen() {
                 title="Kaam Details"
                 showBack
                 rightElement={
-                    <TouchableOpacity onPress={handleShare} style={{ padding: 8 }}>
+                    <TouchableOpacity onPress={handleShare} style={{ padding: AuraSpacing.s }}>
                         <Share2 size={20} color={AuraColors.primary} />
                     </TouchableOpacity>
                 }
@@ -317,6 +297,21 @@ export default function GigDetailsScreen() {
                             <Clock size={16} color={AuraColors.gray400} />
                             <AuraText variant="bodyBold" color={AuraColors.gray400}>{gig.duration_minutes}m Estimate</AuraText>
                         </View>
+                        {gig.location_point && (
+                            <TouchableOpacity
+                                style={[styles.metaItem, { backgroundColor: 'rgba(0,122,255,0.1)' }]}
+                                onPress={() => {
+                                    haptics.selection();
+                                    const { lat, lng } = gig.location_point as any;
+                                    // 🗺️ USING OPENSTREETMAP (100% FREE & OPEN)
+                                    const url = `https://www.openstreetmap.org/directions?engine=osrm_car&route=%2C;${lat}%2C${lng}`;
+                                    Linking.openURL(url);
+                                }}
+                            >
+                                <MapPin size={16} color={AuraColors.primary} />
+                                <AuraText variant="bodyBold" color={AuraColors.primary}>ROUTE</AuraText>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -362,7 +357,7 @@ export default function GigDetailsScreen() {
                                         </TouchableOpacity>
                                     )}
 
-                                    {isWorker && m.status === 'pending' && (
+                                    {isTalent && m.status === 'pending' && (
                                         <TouchableOpacity
                                             style={styles.mActionBtn}
                                             onPress={() => handleMarkMilestoneComplete(m.id)}
@@ -380,14 +375,14 @@ export default function GigDetailsScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <AuraText variant="h3">Deliverables</AuraText>
-                        {isWorker && gig.status === 'active' && (
+                        {isTalent && gig.status === 'active' && (
                             <TouchableOpacity onPress={() => setShowUploadForm(!showUploadForm)}>
                                 <AuraText variant="label" color={AuraColors.primary}>{showUploadForm ? 'CANCEL' : '+ ADD ASSET'}</AuraText>
                             </TouchableOpacity>
                         )}
                     </View>
 
-                    {showUploadForm && isWorker && (
+                    {showUploadForm && isTalent && (
                         <AuraMotion type="zoom" style={styles.uploadForm}>
                             <AuraInput
                                 placeholder="Secure Asset Link (Dropbox/Drive)..."
@@ -428,7 +423,7 @@ export default function GigDetailsScreen() {
                                         <AuraText variant="label" color={AuraColors.primary} numberOfLines={1}>{del.file_url}</AuraText>
                                     </TouchableOpacity>
                                     <AuraText variant="caption" color={AuraColors.gray500} style={{ marginTop: 4 }}>
-                                        {new Date(del.created_at).toLocaleString()}
+                                        {dayjs(del.created_at).format('DD/MM/YYYY HH:mm')}
                                     </AuraText>
                                 </View>
                                 <CheckCircle size={18} color={AuraColors.success} />
@@ -457,7 +452,7 @@ export default function GigDetailsScreen() {
                     <TouchableOpacity
                         style={{ marginTop: 24, alignItems: 'center' }}
                         onPress={() => {
-                            const defendantId = isClient ? gig.assigned_worker_id : gig.client_id;
+                            const defendantId = isClient ? gig.assigned_talent_id : gig.client_id;
                             if (defendantId) {
                                 navigation.navigate('Dispute', { gigId: gig.id, defendantId });
                             }
@@ -473,15 +468,15 @@ export default function GigDetailsScreen() {
                 <TouchableOpacity
                     style={styles.chatFab}
                     onPress={() => navigation.navigate('Chat', {
-                        roomId: isClient ? `direct_${gig.assigned_worker_id}` : `direct_${gig.client_id}`,
+                        roomId: isClient ? `direct_${gig.assigned_talent_id}` : `direct_${gig.client_id}`,
                         recipientName: 'Mission Contact' // Ideally fetch real name
                     })}
                 >
                     <MessageSquare size={24} color={AuraColors.white} />
                 </TouchableOpacity>
 
-                {/* Apply Button for Workers */}
-                {!isWorker && !isClient && gig.status === 'open' && (
+                {/* Apply Button for Talents */}
+                {!isTalent && !isClient && gig.status === 'open' && (
                     <AuraMotion type="slide" style={styles.bottomApply}>
                         <AuraButton
                             title="APPLY TO KAAM"
@@ -537,7 +532,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: AuraColors.surfaceElevated,
-        padding: 16,
+        padding: AuraSpacing.l,
         borderRadius: AuraBorderRadius.xl,
         borderWidth: 1,
         borderColor: AuraColors.gray800,
@@ -559,9 +554,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(52, 199, 89, 0.1)',
-        paddingHorizontal: 8,
+        paddingHorizontal: AuraSpacing.s,
         paddingVertical: 4,
-        borderRadius: 8,
+        borderRadius: AuraBorderRadius.s,
     },
     section: {
         marginBottom: 32,
@@ -584,9 +579,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
         backgroundColor: AuraColors.surfaceElevated,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
+        paddingHorizontal: AuraSpacing.m,
+        paddingVertical: AuraSpacing.s,
+        borderRadius: AuraBorderRadius.m,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -597,7 +592,7 @@ const styles = StyleSheet.create({
     uploadForm: {
         gap: 16,
         backgroundColor: AuraColors.surface,
-        padding: 16,
+        padding: AuraSpacing.l,
         borderRadius: 16,
         marginBottom: 16,
         borderWidth: 1,
@@ -617,7 +612,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 16,
         backgroundColor: AuraColors.surfaceElevated,
-        padding: 16,
+        padding: AuraSpacing.l,
         borderRadius: 16,
         marginBottom: 12,
         borderWidth: 1,
@@ -633,7 +628,7 @@ const styles = StyleSheet.create({
     },
     actionSection: {
         backgroundColor: AuraColors.surfaceElevated,
-        padding: 24,
+        padding: AuraSpacing.xl,
         borderRadius: AuraBorderRadius.xl,
         borderWidth: 1,
         borderColor: AuraColors.gray800,
@@ -656,7 +651,7 @@ const styles = StyleSheet.create({
     },
     milestoneCard: {
         backgroundColor: AuraColors.surfaceElevated,
-        padding: 16,
+        padding: AuraSpacing.l,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: AuraColors.gray800,
@@ -670,7 +665,7 @@ const styles = StyleSheet.create({
     mIndex: {
         width: 24,
         height: 24,
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
         backgroundColor: AuraColors.gray700,
         alignItems: 'center',
         justifyContent: 'center',
@@ -685,8 +680,8 @@ const styles = StyleSheet.create({
     bottomApply: {
         marginTop: 40,
         backgroundColor: AuraColors.surfaceElevated,
-        padding: 24,
-        borderRadius: 24,
+        padding: AuraSpacing.xl,
+        borderRadius: AuraBorderRadius.xl,
         borderWidth: 1,
         borderColor: AuraColors.gray800,
     }

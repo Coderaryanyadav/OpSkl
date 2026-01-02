@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@api/supabase';
 import { AuraText } from '@core/components/AuraText';
 import { AuraInput } from '@core/components/AuraInput';
@@ -8,11 +7,10 @@ import { AuraButton } from '@core/components/AuraButton';
 import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
 import { ArrowRight, Phone, Shield } from 'lucide-react-native';
 import { checkRateLimit, secureLog } from '@core/utils/security';
-import * as Device from 'expo-device';
 import { useAura } from '@core/context/AuraProvider';
 
 export default function LoginScreen() {
-    const navigation = useNavigation<any>();
+
     const { showDialog, showToast } = useAura();
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
@@ -97,7 +95,7 @@ export default function LoginScreen() {
                     <View style={styles.logoBox}>
                         <Shield color={AuraColors.white} size={40} />
                     </View>
-                    <AuraText variant="h1" style={styles.welcomeTitle}>AURA BHARAT</AuraText>
+                    <AuraText variant="h1" style={styles.welcomeTitle}>OpSkl</AuraText>
                     <AuraText variant="bodyLarge" color={AuraColors.gray400} style={{ marginTop: 8 }}>
                         {step === 'phone' ? 'Enter your mobile to begin' : 'Enter the verification signal'}
                     </AuraText>

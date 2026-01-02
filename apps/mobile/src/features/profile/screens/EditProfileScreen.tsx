@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '@api/supabase';
+import { Repository } from '@api/repository';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
@@ -98,7 +98,7 @@ export default function EditProfileScreen() {
                 hourly_rate: hourlyRate ? parseFloat(hourlyRate) : 0,
             };
 
-            const { error } = await supabase.from('profiles').update(updateData).eq('id', user.id);
+            const { error } = await Repository.updateProfile(user.id, updateData);
             if (error) throw error;
 
             haptics.success();
@@ -148,7 +148,7 @@ export default function EditProfileScreen() {
 
                 <AuraMotion type="slide" delay={200} style={styles.form}>
                     <AuraInput
-                        label="Operative Name"
+                        label="Talent Name"
                         value={fullName}
                         onChangeText={setFullName}
                         placeholder="Legal designation..."

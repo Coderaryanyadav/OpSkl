@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GlobalErrorBoundary } from '@core/components/GlobalErrorBoundary';
 import RootNavigator from '@navigation/RootNavigator';
 import { AuraColors } from '@theme/aura';
 
@@ -17,15 +18,17 @@ export default function App() {
     }, []);
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-                <AuthProvider>
-                    <AuraProvider>
-                        <StatusBar style="light" backgroundColor={AuraColors.background} />
-                        <RootNavigator />
-                    </AuraProvider>
-                </AuthProvider>
-            </SafeAreaProvider>
-        </GestureHandlerRootView>
+        <GlobalErrorBoundary>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <SafeAreaProvider>
+                    <AuthProvider>
+                        <AuraProvider>
+                            <StatusBar style="light" backgroundColor={AuraColors.background} />
+                            <RootNavigator />
+                        </AuraProvider>
+                    </AuthProvider>
+                </SafeAreaProvider>
+            </GestureHandlerRootView>
+        </GlobalErrorBoundary>
     );
 }

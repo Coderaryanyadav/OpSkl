@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
@@ -7,13 +7,13 @@ import { AuraListItem } from '@core/components/AuraListItem';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraButton } from '@core/components/AuraButton';
 import { AuraMotion } from '@core/components/AuraMotion';
-import { Bell, Shield, Lock, FileText, HelpCircle, ChevronRight, LogOut, Smartphone } from 'lucide-react-native';
+import { Bell, Shield, Lock, FileText, HelpCircle, ChevronRight, LogOut, Smartphone, Zap, Terminal } from 'lucide-react-native';
 import { supabase } from '@api/supabase';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Switch } from 'react-native'; // Standard switch for better control in this list
 import { useAuth } from '@context/AuthProvider';
-import { Terminal } from 'lucide-react-native';
+import { BiometricService } from '@core/services/biometrics';
 
 export default function SettingsScreen() {
     const navigation = useNavigation<any>();
@@ -22,15 +22,20 @@ export default function SettingsScreen() {
     const haptics = useAuraHaptics();
 
     const [pushEnabled, setPushEnabled] = useState(true);
-    const [biometrics, setBiometrics] = useState(true);
+    const [biometrics, setBiometrics] = useState(false);
     const [ghostMode, setGhostMode] = useState(false);
+
+    useEffect(() => {
+        // Load persisted settings
+        BiometricService.isEnabled().then(setBiometrics);
+    }, []);
     const [publicSearch, setPublicSearch] = useState(true);
 
     const handleLogout = () => {
         haptics.warning();
         showDialog({
-            title: 'Terminate Session',
-            message: 'Are you sure you want to end your secure deployment?',
+            title: 'Sign Out',
+            message: 'Are you sure you want to sign out?',
             type: 'warning',
             onConfirm: async () => {
                 haptics.heavy();
@@ -58,7 +63,11 @@ export default function SettingsScreen() {
                             rightElement={
                                 <Switch
                                     value={biometrics}
-                                    onValueChange={(val) => { setBiometrics(val); haptics.selection(); }}
+                                    onValueChange={(val) => {
+                                        setBiometrics(val);
+                                        BiometricService.setEnabled(val);
+                                        haptics.selection();
+                                    }}
                                     trackColor={{ false: AuraColors.gray200, true: AuraColors.white }}
                                     thumbColor={biometrics ? AuraColors.black : AuraColors.gray600}
                                 />
@@ -129,7 +138,7 @@ export default function SettingsScreen() {
                         <AuraListItem
                             title="Mission Support"
                             leftIcon={<HelpCircle size={20} color={AuraColors.white} />}
-                            onPress={() => { haptics.selection(); Linking.openURL('https://support.aura.app'); }}
+                            onPress={() => { haptics.selection(); Linking.openURL('https://support.opskl.com'); }}
                             rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
                         />
                         <View style={styles.divider} />
@@ -138,6 +147,42 @@ export default function SettingsScreen() {
                             leftIcon={<FileText size={20} color={AuraColors.white} />}
                             onPress={() => { haptics.selection(); navigation.navigate('PrivacyPolicy'); }}
                             rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
+                        />
+                    </View>
+                </AuraMotion>
+
+                {/* Government Schemes (Growth Item #40) */}
+                <AuraMotion type="slide" delay={320}>
+                    <AuraText variant="label" color={AuraColors.gray600} style={styles.sectionHeader}>BHARAT INITIATIVES</AuraText>
+                    <View style={styles.section}>
+                        <AuraListItem
+                            title="Digital India Benefits"
+                            subtitle="PMKVY & Skill India Portal"
+                            leftIcon={<Shield size={20} color={AuraColors.success} />}
+                            onPress={() => { haptics.selection(); Linking.openURL('https://www.pmkvyofficial.org'); }}
+                            rightElement={<ChevronRight size={18} color={AuraColors.gray700} />}
+                        />
+                    </View>
+                </AuraMotion>
+
+                {/* Founder Pulse (Bharat Retention Layer) */}
+                <AuraMotion type="slide" delay={350}>
+                    <AuraText variant="label" color={AuraColors.primary} style={styles.sectionHeader}>FOUNDER PULSE</AuraText>
+                    <View style={[styles.section, { borderColor: AuraColors.primary }]}>
+                        <AuraListItem
+                            title="Direct to Founder"
+                            subtitle="Strategic feedback loop"
+                            leftIcon={<Zap size={20} color={AuraColors.primary} />}
+                            onPress={() => {
+                                haptics.heavy();
+                                showDialog({
+                                    title: 'Founder Pulse Active',
+                                    message: 'Your signal will be transmitted directly to the core engineering team. Proceed with strategic intel?',
+                                    primaryLabel: 'Transmit',
+                                    onConfirm: () => showToast({ message: 'Intel Received. Pulse Synced.', type: 'success' })
+                                });
+                            }}
+                            rightElement={<ChevronRight size={18} color={AuraColors.primary} />}
                         />
                     </View>
                 </AuraMotion>
@@ -160,14 +205,14 @@ export default function SettingsScreen() {
 
                 <AuraMotion type="slide" delay={400} style={styles.footer}>
                     <AuraButton
-                        title="TERMINATE SESSION"
+                        title="SIGN OUT"
                         variant="primary"
                         onPress={handleLogout}
                         style={styles.logoutBtn}
                         icon={<LogOut size={18} color={AuraColors.black} />}
                     />
                     <AuraText variant="caption" align="center" color={AuraColors.gray700} style={{ letterSpacing: 2, marginTop: 12 }}>
-                        AURA CORE v3.1.0 • SECURE • SYNCED
+                        OpSkl CORE v1.0.0-BHARAT • SECURE • SYNCED
                     </AuraText>
                 </AuraMotion>
 

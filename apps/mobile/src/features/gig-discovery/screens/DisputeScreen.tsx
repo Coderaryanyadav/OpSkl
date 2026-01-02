@@ -84,7 +84,7 @@ export default function DisputeScreen() {
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.warningCard}>
                     <AlertTriangle size={32} color={AuraColors.error} />
-                    <AuraText variant="h3" color={AuraColors.error} style={{ marginVertical: 8 }}>
+                    <AuraText variant="h3" color={AuraColors.error} style={{ marginVertical: AuraSpacing.s }}>
                         Protocol Warning
                     </AuraText>
                     <AuraText variant="body" color={AuraColors.gray300} align="center">
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     },
     warningCard: {
         backgroundColor: 'rgba(255, 59, 48, 0.1)',
-        padding: 24,
+        padding: AuraSpacing.xl,
         borderRadius: AuraBorderRadius.lg,
         alignItems: 'center',
         borderWidth: 1,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
         backgroundColor: AuraColors.surfaceElevated,
         color: AuraColors.white,
         borderRadius: AuraBorderRadius.md,
-        padding: 16,
+        padding: AuraSpacing.l,
         height: 150,
         fontSize: 16,
         borderWidth: 1,
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     infoBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: AuraSpacing.l,
         backgroundColor: 'rgba(0, 122, 255, 0.1)',
         borderRadius: AuraBorderRadius.md,
     },

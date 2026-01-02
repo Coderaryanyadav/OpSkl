@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useAura } from '@core/context/AuraProvider';
 import { View, StyleSheet, FlatList, Image, TouchableOpacity, RefreshControl } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { supabase } from '@api/supabase';
@@ -9,7 +10,7 @@ import { AuraBadge } from '@core/components/AuraBadge';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
 import { Tag, ExternalLink, Gift, ShieldCheck } from 'lucide-react-native';
-import { useAura } from '@core/context/AuraProvider';
+
 
 export default function TalentPerksScreen() {
     const haptics = useAuraHaptics();
@@ -28,13 +29,14 @@ export default function TalentPerksScreen() {
 
             if (error) throw error;
             setDeals(data || []);
-        } catch (e) {
-            console.error("Fetch deals error", e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({ message: 'Failed to load perks. Please try again.', type: 'error' });
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [showToast]);
 
     useEffect(() => {
         fetchDeals();
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
     heroCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 24,
+        padding: AuraSpacing.xl,
         backgroundColor: AuraColors.surface,
         borderRadius: 32,
         borderWidth: 1.5,
@@ -188,7 +190,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         backgroundColor: AuraColors.surface,
         borderRadius: 32,
-        padding: 24,
+        padding: AuraSpacing.xl,
         marginBottom: 20,
         borderWidth: 1.5,
         borderColor: AuraColors.gray200,
@@ -228,9 +230,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: AuraColors.white,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
+        paddingHorizontal: AuraSpacing.m,
+        paddingVertical: AuraSpacing.s,
+        borderRadius: AuraBorderRadius.m,
     },
     empty: {
         flex: 1,

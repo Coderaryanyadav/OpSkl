@@ -8,11 +8,12 @@ import { AuraMotion } from '@core/components/AuraMotion';
 import { AuraBadge } from '@core/components/AuraBadge';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { supabase } from '@api/supabase';
+import { Repository } from '@api/repository';
 import {
     CheckCircle, ExternalLink, IndianRupee, Download, ShieldAlert,
     TrendingUp, ArrowUpRight
 } from 'lucide-react-native';
+import dayjs from 'dayjs';
 
 export default function AdminModerationScreen() {
     const navigation = useNavigation<any>();
@@ -27,14 +28,12 @@ export default function AdminModerationScreen() {
     const fetchDisputes = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('disputes')
-                .select('*, gig:gigs(title), initiator:profiles!initiator_id(full_name), defendant:profiles!defendant_id(full_name)')
-                .order('created_at', { ascending: false });
+            const { data, error } = await Repository.getDisputes();
 
             if (error) throw error;
             setDisputes(data || []);
-        } catch (e: any) {
+        } catch (error) {
+            if (__DEV__) console.error(error);
             showToast({ message: 'Failed to access moderation nodes', type: 'error' });
         } finally {
             setLoading(false);
@@ -45,15 +44,12 @@ export default function AdminModerationScreen() {
         setLoading(true);
         try {
             // Fetch financial audit logs (using escrow and transfer tokens as proxy)
-            const { data, error } = await supabase
-                .from('escrow_transactions')
-                .select('*, client:profiles!client_id(full_name), worker:profiles!worker_id(full_name)')
-                .order('created_at', { ascending: false })
-                .limit(50);
+            const { data, error } = await Repository.getAllEscrowTransactions(50);
 
             if (error) throw error;
             setTransactions(data || []);
-        } catch (e: any) {
+        } catch (error) {
+            if (__DEV__) console.error(error);
             showToast({ message: 'Financial node access denied', type: 'error' });
         } finally {
             setLoading(false);
@@ -72,10 +68,7 @@ export default function AdminModerationScreen() {
             message: 'Marking this as resolved will archive the ticket. Ensure adjudication is complete.',
             type: 'warning',
             onConfirm: async () => {
-                const { error } = await supabase
-                    .from('disputes')
-                    .update({ status: 'resolved' })
-                    .eq('id', id);
+                const { error } = await Repository.resolveDispute(id);
 
                 if (error) {
                     showToast({ message: 'Sync failed', type: 'error' });
@@ -103,7 +96,7 @@ export default function AdminModerationScreen() {
                 showBack
                 onBack={() => navigation.goBack()}
                 rightElement={
-                    <TouchableOpacity onPress={handleExportCSV} style={{ padding: 8 }}>
+                    <TouchableOpacity onPress={handleExportCSV} style={{ padding: AuraSpacing.s }}>
                         <Download size={20} color={AuraColors.primary} />
                     </TouchableOpacity>
                 }
@@ -156,11 +149,11 @@ export default function AdminModerationScreen() {
                             <AuraMotion key={d.id} type="slide" delay={i * 50} style={styles.card}>
                                 <View style={styles.cardHeader}>
                                     <AuraBadge label={d.status.toUpperCase()} variant={d.status === 'open' ? 'error' : 'success'} />
-                                    <AuraText variant="caption" color={AuraColors.gray500}>{new Date(d.created_at).toLocaleDateString()}</AuraText>
+                                    <AuraText variant="caption" color={AuraColors.gray500}>{dayjs(d.created_at).format('DD/MM/YYYY')}</AuraText>
                                 </View>
 
                                 <AuraText variant="h3" style={{ marginTop: 12 }}>{d.gig?.title || 'Unknown Gig'}</AuraText>
-                                <AuraText variant="bodySmall" color={AuraColors.gray400} style={{ marginVertical: 8 }} numberOfLines={2}>
+                                <AuraText variant="bodySmall" color={AuraColors.gray400} style={{ marginVertical: AuraSpacing.s }} numberOfLines={2}>
                                     {d.reason}
                                 </AuraText>
 
@@ -218,12 +211,12 @@ export default function AdminModerationScreen() {
                                 <ArrowUpRight size={14} color={AuraColors.gray600} style={{ alignSelf: 'center', marginLeft: 8, marginRight: 8 }} />
                                 <View style={{ flex: 1 }}>
                                     <AuraText variant="label" color={AuraColors.gray500}>RECEIVER</AuraText>
-                                    <AuraText variant="bodySmall" color={AuraColors.white}>{t.worker?.full_name}</AuraText>
+                                    <AuraText variant="bodySmall" color={AuraColors.white}>{t.talent?.full_name}</AuraText>
                                 </View>
                             </View>
 
                             <AuraText variant="caption" color={AuraColors.gray500} style={{ marginTop: 12 }}>
-                                {new Date(t.created_at).toLocaleString().toUpperCase()} • TXID: {t.id.substring(0, 8)}
+                                {dayjs(t.created_at).format('DD/MM/YYYY HH:mm')} • TXID: {t.id.substring(0, 8)}
                             </AuraText>
                         </AuraMotion>
                     ))
@@ -249,7 +242,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
+        paddingVertical: AuraSpacing.m,
         borderRadius: 16,
         backgroundColor: AuraColors.surfaceElevated,
         borderWidth: 1.5,
@@ -272,7 +265,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: AuraColors.surfaceElevated,
         padding: 20,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         borderWidth: 1.5,
         borderColor: AuraColors.gray800,
         alignItems: 'center',
@@ -285,7 +278,7 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: AuraColors.surfaceElevated,
         padding: 20,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         borderWidth: 1.5,
         borderColor: AuraColors.gray800,
         marginBottom: 16,
@@ -299,7 +292,7 @@ const styles = StyleSheet.create({
     parties: {
         flexDirection: 'row',
         backgroundColor: 'rgba(255,255,255,0.03)',
-        padding: 12,
+        padding: AuraSpacing.m,
         borderRadius: 16,
         marginTop: 12,
     },
@@ -316,7 +309,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
+        paddingVertical: AuraSpacing.m,
         borderRadius: 14,
         borderWidth: 1,
         borderColor: 'rgba(0,122,255,0.2)',

@@ -1,0 +1,8 @@
+# Build artifacts
+dist/
+.expo/
+node_modules/
+
+# Generated files
+*.bundle.js
+*.bundle.map

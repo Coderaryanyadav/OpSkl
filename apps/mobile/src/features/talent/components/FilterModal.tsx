@@ -3,7 +3,8 @@ import { View, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-nat
 import { AuraText } from '@core/components/AuraText';
 import { AuraButton } from '@core/components/AuraButton';
 import { AuraColors } from '@theme/aura';
-import { X, IndianRupee, AlertTriangle, Heart, Bookmark, Trash2 } from 'lucide-react-native';
+import { X, IndianRupee, AlertTriangle, Heart, Bookmark, Trash2, MapPin } from 'lucide-react-native';
+import { AuraInput } from '@core/components/AuraInput';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Repository } from '@api/repository';
 import { useAuth } from '@context/AuthProvider';
@@ -12,8 +13,8 @@ import { SavedSearch } from '@features/gig-discovery/types';
 interface FilterModalProps {
     visible: boolean;
     onClose: () => void;
-    onApply: (filters: { minBudget?: number; maxBudget?: number; urgency?: 'low' | 'medium' | 'high' }) => void;
-    onSave?: (filters: { minBudget?: number; maxBudget?: number; urgency?: 'low' | 'medium' | 'high' }) => void;
+    onApply: (filters: { minBudget?: number; maxBudget?: number; urgency?: 'low' | 'medium' | 'high'; pincode?: string }) => void;
+    onSave?: (filters: { minBudget?: number; maxBudget?: number; urgency?: 'low' | 'medium' | 'high'; pincode?: string }) => void;
 }
 
 export default function FilterModal({ visible, onClose, onApply, onSave }: FilterModalProps) {
@@ -24,6 +25,7 @@ export default function FilterModal({ visible, onClose, onApply, onSave }: Filte
     const [minBudget, setMinBudget] = useState<number | undefined>(undefined);
     const [maxBudget, setMaxBudget] = useState<number | undefined>(undefined);
     const [urgency, setUrgency] = useState<'low' | 'medium' | 'high' | undefined>(undefined);
+    const [pincode, setPincode] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         if (visible && user) {
@@ -35,7 +37,7 @@ export default function FilterModal({ visible, onClose, onApply, onSave }: Filte
 
     const handleApply = () => {
         haptics.success();
-        onApply({ minBudget, maxBudget, urgency });
+        onApply({ minBudget, maxBudget, urgency, pincode });
         onClose();
     };
 
@@ -44,6 +46,7 @@ export default function FilterModal({ visible, onClose, onApply, onSave }: Filte
         setMinBudget(undefined);
         setMaxBudget(undefined);
         setUrgency(undefined);
+        setPincode(undefined);
     };
 
     return (
@@ -86,6 +89,21 @@ export default function FilterModal({ visible, onClose, onApply, onSave }: Filte
                                 </ScrollView>
                             </View>
                         )}
+
+                        {/* Pincode Section (Bharat Specific) */}
+                        <View style={styles.section}>
+                            <View style={styles.sectionTitle}>
+                                <MapPin size={16} color={AuraColors.primary} />
+                                <AuraText variant="label" style={{ marginLeft: 8 }}>TARGET PIN NODE</AuraText>
+                            </View>
+                            <AuraInput
+                                placeholder="Enter 6-digit PIN..."
+                                value={pincode}
+                                onChangeText={setPincode}
+                                keyboardType="number-pad"
+                                maxLength={6}
+                            />
+                        </View>
 
                         {/* Budget Section */}
                         <View style={styles.section}>
@@ -150,11 +168,11 @@ export default function FilterModal({ visible, onClose, onApply, onSave }: Filte
 
                     <View style={styles.footer}>
                         {onSave && (minBudget || urgency) && (
-                            <TouchableOpacity onPress={() => onSave({ minBudget, maxBudget, urgency })} style={{ padding: 16 }}>
+                            <TouchableOpacity onPress={() => onSave({ minBudget, maxBudget, urgency })} style={{ padding: AuraSpacing.l }}>
                                 <Heart size={20} color={AuraColors.error} />
                             </TouchableOpacity>
                         )}
-                        <TouchableOpacity onPress={handleReset} style={{ padding: 16 }}>
+                        <TouchableOpacity onPress={handleReset} style={{ padding: AuraSpacing.l }}>
                             <AuraText variant="label" color={AuraColors.gray500}>RESET</AuraText>
                         </TouchableOpacity>
                         <AuraButton
@@ -180,7 +198,7 @@ const styles = StyleSheet.create({
         backgroundColor: AuraColors.surfaceElevated,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
-        padding: 24,
+        padding: AuraSpacing.xl,
         maxHeight: '80%',
         borderTopWidth: 1,
         borderRightWidth: 1,
@@ -194,7 +212,7 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     closeBtn: {
-        padding: 8,
+        padding: AuraSpacing.s,
         backgroundColor: AuraColors.surface,
         borderRadius: 20,
     },
@@ -212,7 +230,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     chip: {
-        paddingHorizontal: 16,
+        paddingHorizontal: AuraSpacing.l,
         paddingVertical: 10,
         borderRadius: 20,
         backgroundColor: AuraColors.surface,
@@ -229,7 +247,7 @@ const styles = StyleSheet.create({
     radioItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: AuraSpacing.l,
         backgroundColor: AuraColors.surface,
         borderRadius: 16,
         borderWidth: 1,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { supabase } from '@api/supabase';
 import { AuraColors, AuraSpacing } from '@theme/aura';
 import { AuraHeader } from '@core/components/AuraHeader';
@@ -12,6 +12,7 @@ import { sanitizeInput } from '@core/utils/security';
 import { useAuth } from '@context/AuthProvider';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAura } from '@core/context/AuraProvider';
+import { SecurityGuard } from '@core/utils/security_guard';
 
 dayjs.extend(relativeTime);
 
@@ -45,7 +46,7 @@ export default function ChatScreen() {
     const haptics = useAuraHaptics();
     const { showToast } = useAura();
     const route = useRoute<any>();
-    const navigation = useNavigation<any>();
+
     const { user } = useAuth();
     const params = route.params || {};
     const { roomId, recipientName } = params;
@@ -135,12 +136,11 @@ export default function ChatScreen() {
         if (!cleanInput || !user) return;
 
         // Tactical watchdog: Detect external contact/payment phishing (Layer 3)
-        const blocklist = [/(\d{10,})/, /paytm/i, /gpay/i, /phonepe/i, /@gmail\.com/i, /@yahoo\.com/i, /whatsapp/i];
-        const isSuspicious = blocklist.some(regex => regex.test(cleanInput));
+        const { isSafe, warning } = await SecurityGuard.scanForLeakage(cleanInput, user.id);
 
-        if (isSuspicious) {
+        if (!isSafe) {
             haptics.error();
-            showToast({ message: "SIGNAL BLOCKED: Security policy prohibits sharing external contact/payment intel within this frequency.", type: 'error' });
+            showToast({ message: warning || "SIGNAL BLOCKED: Security Policy Violation", type: 'error' });
             return;
         }
 
@@ -155,7 +155,6 @@ export default function ChatScreen() {
 
         const { error } = await supabase.from('messages').insert(newMessage);
         if (error) {
-            console.error("[Chat] Send Error:", error);
             haptics.error();
         }
     };
@@ -201,7 +200,7 @@ export default function ChatScreen() {
                 showsVerticalScrollIndicator={false}
                 ListFooterComponent={isRecipientTyping ? (
                     <View style={styles.typingIndicator}>
-                        <AuraText variant="caption" color={AuraColors.primary}>Operative is transmitting signal...</AuraText>
+                        <AuraText variant="caption" color={AuraColors.primary}>Talent is transmitting signal...</AuraText>
                     </View>
                 ) : null}
             />
@@ -291,9 +290,9 @@ const styles = StyleSheet.create({
     inputBar: {
         flexDirection: 'row',
         backgroundColor: AuraColors.surfaceElevated,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         alignItems: 'center',
-        paddingHorizontal: 8,
+        paddingHorizontal: AuraSpacing.s,
         paddingVertical: 6,
         borderWidth: 1,
         borderColor: AuraColors.gray800,
@@ -308,8 +307,8 @@ const styles = StyleSheet.create({
         flex: 1,
         minHeight: 36,
         maxHeight: 120,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: AuraSpacing.m,
+        paddingVertical: AuraSpacing.s,
         color: AuraColors.white,
         fontSize: 16,
     },
@@ -331,7 +330,7 @@ const styles = StyleSheet.create({
         marginRight: 4,
     },
     typingIndicator: {
-        paddingHorizontal: 16,
+        paddingHorizontal: AuraSpacing.l,
         paddingBottom: 8,
     }
 });

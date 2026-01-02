@@ -1,33 +1,24 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { supabase } from '@api/supabase';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { Repository } from '@api/repository';
 import { AuraHeader } from '@core/components/AuraHeader';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from '@core/components/AuraText';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraLoader } from '@core/components/AuraLoader';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraSpacing, AuraShadows } from '@theme/aura';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraMotion } from '@core/components/AuraMotion';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { Bell, Briefcase, Star, IndianRupee, ShieldAlert } from 'lucide-react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import dayjs from 'dayjs';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAuth } from '@context/AuthProvider';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { useAura } from '@core/context/AuraProvider';
 
 dayjs.extend(relativeTime);
 
 export default function NotificationsScreen() {
     const haptics = useAuraHaptics();
     const { user } = useAuth();
+    const { showToast } = useAura();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -35,39 +26,33 @@ export default function NotificationsScreen() {
     const fetchNotifications = useCallback(async () => {
         if (!user) return;
         try {
-
-            const { data } = await supabase
-                .from('notifications')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
+            const { data } = await Repository.getNotifications(user.id);
             if (data) setNotifications(data);
-        } catch (e) {
-            console.error('Fetch Notifications Error:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to load notifications. Please try again.',
+                type: 'error'
+            });
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [user, showToast]);
 
     useEffect(() => {
         fetchNotifications();
 
-        const sub = supabase
-            .channel('signal-sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-                fetchNotifications();
-            })
-            .subscribe();
-
-        return () => { sub.unsubscribe(); };
+        // Realtime sync should be managed via Repository or global signaling
+        // For now, simpler fetch is okay but we could add subscribeToNotifications
+        return () => { };
     }, [fetchNotifications]);
 
     const markAsRead = async (id: string) => {
         haptics.light();
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-        await supabase.from('notifications').update({ read: true }).eq('id', id);
+        await Repository.markNotificationRead(id);
     };
 
     const onRefresh = () => {
@@ -169,7 +154,7 @@ const styles = StyleSheet.create({
     },
     item: {
         flexDirection: 'row',
-        padding: 24,
+        padding: AuraSpacing.xl,
         backgroundColor: AuraColors.surface,
         borderRadius: 32,
         marginBottom: 16,
@@ -185,7 +170,7 @@ const styles = StyleSheet.create({
     iconBox: {
         width: 52,
         height: 52,
-        borderRadius: 18,
+        borderRadius: AuraBorderRadius.l,
         backgroundColor: AuraColors.background,
         alignItems: 'center',
         justifyContent: 'center',

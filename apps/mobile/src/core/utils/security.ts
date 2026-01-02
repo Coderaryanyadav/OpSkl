@@ -25,8 +25,10 @@ export const checkRateLimit = async (key: string, limit: number, windowMs: numbe
         record.count++;
         await AsyncStorage.setItem(`rate_limit_${key}`, JSON.stringify(record));
         return true;
-    } catch (e) {
-        return true; // Fail open in case of storage error to not block users
+    } catch (error) {
+            if (__DEV__) console.error(error);
+        console.error('Rate limit check error:', error);
+        return false;
     }
 };
 
@@ -76,8 +78,7 @@ export const containsProfanity = (text: string): boolean => {
  * 🔍 SECURE LOGGING
  * Logs only in dev, never leaks PII in production.
  */
-export const secureLog = (message: string, context?: any) => {
+export const secureLog = (_message: string, _context?: any) => {
     if (__DEV__) {
-        console.log(`[SECURE_LOG] ${message}`, context || '');
     }
 };

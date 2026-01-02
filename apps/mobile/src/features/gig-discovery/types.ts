@@ -6,13 +6,15 @@ export interface Gig {
     description: string;
     category: string;
     location: string;
+    pincode?: string;
+    location_point?: { lat: number, lng: number };
     budget: number;
     pay_amount_cents: number;
     duration_minutes: number;
     urgency_level: 'low' | 'medium' | 'high';
     status: GigStatus;
     client_id: string;
-    assigned_worker_id?: string;
+    assigned_talent_id?: string;
     created_at: string;
     client?: any; // Break circular dependency
     applications?: Application[];
@@ -23,11 +25,11 @@ export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'completed
 export interface Application {
     id: string;
     gig_id: string;
-    worker_id: string;
+    talent_id: string;
     status: ApplicationStatus;
     message: string | null;
     created_at: string;
-    worker?: any; // Break circular dependency
+    talent?: any; // Break circular dependency
     gig?: Gig;
 }
 
@@ -35,11 +37,15 @@ export interface GigFilters {
     status?: GigStatus;
     category?: string;
     clientId?: string;
-    workerId?: string;
+    talentId?: string;
     title?: string;
     minBudget?: number;
     maxBudget?: number;
     urgency?: 'low' | 'medium' | 'high';
+    lat?: number;
+    lng?: number;
+    radius?: number;
+    pincode?: string;
 }
 
 export interface SavedSearch {
@@ -75,7 +81,7 @@ export interface Review {
 export interface Deliverable {
     id: string;
     gig_id: string;
-    worker_id: string;
+    talent_id: string;
     file_url: string;
     description: string | null;
     status: 'submitted' | 'accepted' | 'rejected';
@@ -86,7 +92,7 @@ export interface EscrowTransaction {
     id: string;
     gig_id: string;
     client_id: string;
-    worker_id: string;
+    talent_id: string;
     amount_cents: number;
     status: 'held' | 'released' | 'refunded' | 'disputed';
     created_at: string;

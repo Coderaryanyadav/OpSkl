@@ -54,7 +54,6 @@ export const SafetyService = {
         });
 
         if (error) {
-            console.error("[Shield] SOS signal interference:", error);
             return false;
         }
 

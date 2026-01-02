@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // Mock Supabase
 const createQueryBuilder = () => {
     const builder = {

@@ -19,9 +19,12 @@ export interface Profile {
     phone: string | null;
     created_at: string;
     updated_at: string;
+    xp: number;
     avg_rating?: number;
     review_count?: number;
     portfolio?: PortfolioItem[];
+    metadata?: any;
+    email?: string;
 }
 
 export interface PortfolioItem {

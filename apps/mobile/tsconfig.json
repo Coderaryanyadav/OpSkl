@@ -53,7 +53,14 @@
                 "core/navigation/*"
             ]
         },
-        "jsx": "react-native"
+        "jsx": "react-native",
+        "incremental": true,
+        "tsBuildInfoFile": ".tsbuildinfo",
+        "maxNodeModuleJsDepth": 1,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true
     },
     "exclude": [
         "node_modules",

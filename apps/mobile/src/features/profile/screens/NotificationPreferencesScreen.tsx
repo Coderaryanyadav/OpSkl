@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Switch } from 'react-native';
 import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraText } from '@core/components/AuraText';
@@ -6,6 +6,7 @@ import { AuraMotion } from '@core/components/AuraMotion';
 import { AuraColors, AuraSpacing, AuraBorderRadius, AuraShadows } from '@theme/aura';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAuth } from '@context/AuthProvider';
+import { useAura } from '@core/context/AuraProvider';
 import { supabase } from '@api/supabase';
 import { Bell, MessageSquare, IndianRupee, Star, Zap, Shield } from 'lucide-react-native';
 
@@ -36,7 +37,7 @@ const NOTIFICATION_SETTINGS = [
     {
         key: 'messages' as keyof NotificationPreferences,
         label: 'Chat Messages',
-        description: 'New messages from clients/workers',
+        description: 'New messages from clients/talents',
         icon: MessageSquare,
         color: AuraColors.warning
     },
@@ -65,6 +66,7 @@ const NOTIFICATION_SETTINGS = [
 
 export default function NotificationPreferencesScreen() {
     const { user } = useAuth();
+    const { showToast } = useAura();
     const haptics = useAuraHaptics();
     const [preferences, setPreferences] = useState<NotificationPreferences>({
         new_gigs: true,
@@ -74,13 +76,8 @@ export default function NotificationPreferencesScreen() {
         reviews: true,
         system: true
     });
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadPreferences();
-    }, []);
-
-    const loadPreferences = async () => {
+    const loadPreferences = useCallback(async () => {
         if (!user) return;
 
         try {
@@ -101,11 +98,17 @@ export default function NotificationPreferencesScreen() {
                 });
             }
         } catch (error) {
-            console.error('Error loading preferences:', error);
-        } finally {
-            setLoading(false);
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to update preference. Please try again.',
+                type: 'error'
+            });
         }
-    };
+    }, [user, showToast]);
+
+    useEffect(() => {
+        loadPreferences();
+    }, [loadPreferences]);
 
     const togglePreference = async (key: keyof NotificationPreferences) => {
         if (!user) return;
@@ -125,8 +128,12 @@ export default function NotificationPreferencesScreen() {
                     onConflict: 'user_id'
                 });
         } catch (error) {
-            console.error('Error saving preference:', error);
-            // Revert on error
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to update preference. Please try again.',
+                type: 'error'
+            });
+        } finally {  // Revert on error
             setPreferences(prev => ({ ...prev, [key]: !newValue }));
         }
     };
@@ -212,7 +219,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: AuraColors.surfaceElevated,
-        padding: 16,
+        padding: AuraSpacing.l,
         borderRadius: AuraBorderRadius.xl,
         marginBottom: 12,
         borderWidth: 1,
@@ -228,7 +235,7 @@ const styles = StyleSheet.create({
     iconBox: {
         width: 44,
         height: 44,
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
         alignItems: 'center',
         justifyContent: 'center',
     },

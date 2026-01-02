@@ -39,12 +39,16 @@ export default function PublicProfileScreen() {
                 const favStatus = await Repository.isFavorite(user.id, userId);
                 setIsFavorite(favStatus);
             }
-        } catch (e) {
-            console.error('Fetch Public Profile Error:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to load profile. User may not exist.',
+                type: 'error'
+            });
         } finally {
             setLoading(false);
         }
-    }, [userId, user]);
+    }, [userId, user, showToast]);
 
     const handleToggleFavorite = async () => {
         if (!user) return;
@@ -74,7 +78,7 @@ export default function PublicProfileScreen() {
                 title="OPERATIVE DOSSIER"
                 showBack
                 rightElement={
-                    <TouchableOpacity onPress={handleToggleFavorite} style={{ padding: 8 }}>
+                    <TouchableOpacity onPress={handleToggleFavorite} style={{ padding: AuraSpacing.s }}>
                         <Heart
                             size={24}
                             color={isFavorite ? AuraColors.error : AuraColors.gray500}
@@ -134,7 +138,7 @@ export default function PublicProfileScreen() {
                 <AuraMotion type="slide" delay={400} style={styles.bioSection}>
                     <View style={styles.bioCard}>
                         <AuraText variant="body" color={AuraColors.gray500} style={{ lineHeight: 24 }}>
-                            {profile?.bio || "This operative maintains a minimalist profile. No public manifesto available at this time."}
+                            {profile?.bio || "This talent maintains a minimalist profile. No public manifesto available at this time."}
                         </AuraText>
                     </View>
                 </AuraMotion>
@@ -163,7 +167,7 @@ export default function PublicProfileScreen() {
                         variant="secondary"
                         onPress={() => {
                             haptics.heavy();
-                            showToast({ message: 'Briefing request transmitted to operative', type: 'success' });
+                            showToast({ message: 'Briefing request transmitted to talent', type: 'success' });
                         }}
                         icon={<Calendar size={18} color={AuraColors.primary} />}
                         style={{ marginTop: 16 }}
@@ -204,9 +208,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(52, 199, 89, 0.05)',
-        paddingHorizontal: 12,
+        paddingHorizontal: AuraSpacing.m,
         paddingVertical: 6,
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
         borderWidth: 1,
         borderColor: 'rgba(52, 199, 89, 0.2)',
     },

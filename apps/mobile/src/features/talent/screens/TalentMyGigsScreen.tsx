@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, RefreshControl, ScrollView } from 'react-native';
-import { supabase } from '@api/supabase';
+import { Repository } from '@api/repository';
 import { AuraColors, AuraSpacing, AuraShadows, AuraBorderRadius } from '@theme/aura';
 import { AuraHeader } from '@core/components/AuraHeader';
 import GigCard from '../components/GigCard';
@@ -9,15 +9,17 @@ import { AuraText } from '@core/components/AuraText';
 import { AuraLoader } from '@core/components/AuraLoader';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { useAuth } from '@context/AuthProvider';
+import { useAura } from '@core/context/AuraProvider';
 import { useNavigation } from '@react-navigation/native';
 import { AuraButton } from '@core/components/AuraButton';
 import { Zap, CheckCircle, Activity, ShieldCheck, Search } from 'lucide-react-native';
 import { Gig, ApplicationStatus } from '@features/gig-discovery/types';
 
-export default function WorkerMyGigsScreen() {
+export default function TalentMyGigsScreen() {
     const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
     const { user } = useAuth();
+    const { showToast } = useAura();
     const [activeGigs, setActiveGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
     const [pendingGigs, setPendingGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
     const [pastGigs, setPastGigs] = useState<(Gig & { application_status: ApplicationStatus })[]>([]);
@@ -27,12 +29,7 @@ export default function WorkerMyGigsScreen() {
     const fetchMyGigs = useCallback(async () => {
         if (!user) return;
         try {
-            const { data: applications, error } = await supabase
-                .from('applications')
-                .select('*, gigs(*)')
-                .eq('worker_id', user.id)
-                .in('status', ['pending', 'accepted', 'completed', 'approved'])
-                .order('created_at', { ascending: false });
+            const { data: applications, error } = await Repository.getTalentApplications(user.id);
 
             if (error) throw error;
 
@@ -58,27 +55,23 @@ export default function WorkerMyGigsScreen() {
             setPastGigs(past);
 
         } catch (error) {
-            console.error('[WorkerMyGigs] Fetch Error:', error);
+            if (__DEV__) console.error(error);
+            showToast({
+                message: 'Failed to load your gigs. Please check your connection.',
+                type: 'error'
+            });
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [user]);
+    }, [user, showToast]);
 
     useEffect(() => {
         fetchMyGigs();
 
         if (user) {
-            const channel = supabase.channel(`worker-gigs-${user.id}`)
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'applications',
-                    filter: `worker_id=eq.${user.id}`
-                }, () => fetchMyGigs())
-                .subscribe();
-
-            return () => { supabase.removeChannel(channel); };
+            const channel = Repository.subscribeToTalentApplications(user.id, fetchMyGigs);
+            return () => { channel.unsubscribe(); };
         }
     }, [fetchMyGigs, user]);
 

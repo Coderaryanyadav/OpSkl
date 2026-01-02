@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraSpacing, AuraBorderRadius } from '@theme/aura';
@@ -16,7 +16,7 @@ import {
     Camera, Video, Palette, GraduationCap, Bike,
     Megaphone, Smartphone, Target, Layers, Plus, Trash2, Trophy, BookOpen, Upload, Mic
 } from 'lucide-react-native';
-import { supabase } from '@api/supabase';
+import { Repository } from '@api/repository';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Save } from 'lucide-react-native';
@@ -35,9 +35,9 @@ const KAAM_TYPES = [
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 
 export default function CreateGigScreen() {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const navigation = useNavigation<any>();
-    const { showDialog, showToast } = useAura();
+    const { showDialog, showToast, addReputation } = useAura();
     const haptics = useAuraHaptics();
     const [selectedCategory, setSelectedCategory] = useState('');
     const [title, setTitle] = useState('');
@@ -52,12 +52,9 @@ export default function CreateGigScreen() {
     const [expiryDays, setExpiryDays] = useState('7');
     const [loading, setLoading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [aiCommand, setAiCommand] = useState('');
 
-    useEffect(() => {
-        loadDraft();
-    }, []);
-
-    const loadDraft = async () => {
+    const loadDraft = useCallback(async () => {
         try {
             const draft = await AsyncStorage.getItem('@opskl_gig_draft');
             if (draft) {
@@ -65,14 +62,19 @@ export default function CreateGigScreen() {
                 setTitle(data.title || '');
                 setDescription(data.description || '');
                 setPay(data.pay || '');
-                setDuration(data.duration || '60');
+                setDuration(data.duration || '');
                 setSelectedCategory(data.category || '');
                 setUrgency(data.urgency || 'medium');
             }
-        } catch (e) {
-            console.error('Draft load failed');
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({ message: 'Failed to load draft.', type: 'info' });
         }
-    };
+    }, [showToast]);
+
+    useEffect(() => {
+        loadDraft();
+    }, [loadDraft]);
 
     const saveDraft = async () => {
         try {
@@ -80,7 +82,8 @@ export default function CreateGigScreen() {
             await AsyncStorage.setItem('@opskl_gig_draft', JSON.stringify(draft));
             showToast({ message: 'Mission Draft Cached', type: 'success' });
             haptics.success();
-        } catch (e) {
+        } catch (error) {
+            if (__DEV__) console.error(error);
             showToast({ message: 'Cache failure', type: 'error' });
         }
     };
@@ -92,12 +95,11 @@ export default function CreateGigScreen() {
     const loadTemplate = async () => {
         haptics.selection();
         // Mock template for now, could be fetched from DB
-        setTitle('Professional Social Media Shoot');
-        setDescription('Need a tactical operative for a high-intensity social broadcast. High-quality visuals required.');
-        setPay('5000');
-        setDuration('120');
-        setSelectedCategory('Visuals');
-        showToast({ message: 'Strategic Template Loaded', type: 'success' });
+        if (profile) {
+            // Fetch potential template from user history
+            // For now, prompt user to use AI instead
+            showToast({ message: 'Use AI Architect to draft mission', type: 'info' });
+        }
     };
     const handleBulkUpload = async () => {
         haptics.heavy();
@@ -150,7 +152,7 @@ export default function CreateGigScreen() {
 
         // Auto-calc total
         if (field === 'amount') {
-            const total = newM.reduce((sum, m) => sum + (parseInt(m.amount) || 0), 0);
+            const total = newM.reduce((sum, m) => sum + (parseInt(m.amount, 10) || 0), 0);
             setPay(total.toString());
         }
     };
@@ -178,12 +180,68 @@ export default function CreateGigScreen() {
             const result = await model.generateContent(prompt);
             const price = parseInt(result.response.text().replace(/[^0-9]/g, ''), 10);
             setPredictedPrice(!isNaN(price) ? price : Math.floor(est));
-        } catch {
+        } catch (error) {
+            if (__DEV__) console.error(error);
             setPredictedPrice(Math.floor(est));
         } finally {
             setIsPredicting(false);
         }
     }, [duration, selectedCategory, urgency]);
+
+    const autoDraftMission = async () => {
+        if (!aiCommand) {
+            showToast({ message: "Transmit mission intent for AI architecture", type: 'error' });
+            return;
+        }
+        setIsGenerating(true);
+        haptics.heavy();
+
+        try {
+            if (!GEMINI_API_KEY) throw new Error("AI core offline");
+            const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+            const prompt = `Convert this mission request into a structured JSON briefing: "${aiCommand}". 
+            Output must be a valid JSON object with keys: 
+            "title" (string), 
+            "description" (string, tactical tone), 
+            "category" (one of: Social, Creative, Technical, Design, Visuals, Intel, Logistics, Signal), 
+            "pay" (number, in INR), 
+            "duration" (number, in minutes),
+            "milestones" (array of {title: string, amount: number}).
+            If parameters are missing, use best strategic estimates. Return ONLY the raw JSON block.`;
+
+            const result = await model.generateContent(prompt);
+            const responseText = result.response.text();
+            // Basic JSON cleaning if needed
+            const jsonStr = responseText.includes('```json')
+                ? responseText.split('```json')[1].split('```')[0]
+                : responseText;
+
+            const structuredData = JSON.parse(jsonStr);
+
+            setTitle(structuredData.title);
+            setDescription(structuredData.description);
+            setSelectedCategory(structuredData.category);
+            setPay(structuredData.pay.toString());
+            setDuration(structuredData.duration.toString());
+
+            if (structuredData.milestones) {
+                setUseMilestones(true);
+                setMilestones(structuredData.milestones.map((m: any) => ({
+                    title: m.title,
+                    amount: m.amount.toString()
+                })));
+            }
+
+            haptics.success();
+            showToast({ message: "Mission architecture successfully drafted", type: 'success' });
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({ message: "Inference failed. Recalibrate input.", type: 'error' });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     const generateDescription = async () => {
         if (!title || !selectedCategory) {
@@ -221,7 +279,7 @@ export default function CreateGigScreen() {
         try {
             if (!user) throw new Error("Authentication node offline.");
 
-            const { data, error } = await supabase.from('gigs').insert({
+            const { data, error } = await Repository.createGig({
                 client_id: user.id,
                 title: title.trim(),
                 description: description.trim(),
@@ -231,19 +289,20 @@ export default function CreateGigScreen() {
                 status: 'open',
                 location_point: `POINT(${location.lng} ${location.lat})`,
                 category: selectedCategory
-            }).select().single();
+            });
 
             if (error) throw error;
+            if (!data) throw new Error("Mission deployment data retrieval failed.");
             const newGigId = data.id;
 
             // Handle Milestones
             if (useMilestones) {
                 for (const m of milestones) {
                     if (m.title && m.amount) {
-                        await supabase.from('milestones').insert({
+                        await Repository.createMilestone({
                             gig_id: newGigId,
                             title: m.title,
-                            amount_cents: parseInt(m.amount) * 100,
+                            amount_cents: parseInt(m.amount, 10) * 100,
                             status: 'pending'
                         });
                     }
@@ -253,6 +312,7 @@ export default function CreateGigScreen() {
             if (error) throw error;
 
             haptics.success();
+            addReputation(100); // Reputation reward for gig creation
             showDialog({
                 title: 'Kaam Deployment Active',
                 message: 'Your Kaam has been broadcasted to our verified professional network.',
@@ -280,13 +340,13 @@ export default function CreateGigScreen() {
                 showBack
                 rightElement={
                     <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <TouchableOpacity onPress={loadTemplate} style={{ padding: 8 }}>
+                        <TouchableOpacity onPress={loadTemplate} style={{ padding: AuraSpacing.s }}>
                             <BookOpen size={20} color={AuraColors.primary} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={saveDraft} style={{ padding: 8 }}>
+                        <TouchableOpacity onPress={saveDraft} style={{ padding: AuraSpacing.s }}>
                             <Save size={20} color={AuraColors.primary} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={handleBulkUpload} style={{ padding: 8 }}>
+                        <TouchableOpacity onPress={handleBulkUpload} style={{ padding: AuraSpacing.s }}>
                             <Upload size={20} color={AuraColors.primary} />
                         </TouchableOpacity>
                     </View>
@@ -297,6 +357,26 @@ export default function CreateGigScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
+                {/* AI Command Center */}
+                <AuraMotion type="slide" style={styles.aiCommandBox}>
+                    <AuraText variant="label" color={AuraColors.primary} style={{ marginBottom: 12, letterSpacing: 2, fontWeight: '900' }}>AI MISSION ARCHITECT</AuraText>
+                    <AuraInput
+                        placeholder="Ex: Need a private security escort for a VIP event in Noida, 5 hours, 3 milestones..."
+                        value={aiCommand}
+                        onChangeText={setAiCommand}
+                        multiline
+                        style={{ height: 80 }}
+                        rightIcon={
+                            <TouchableOpacity onPress={autoDraftMission} disabled={isGenerating}>
+                                {isGenerating ? <ActivityIndicator size="small" color={AuraColors.primary} /> : <Sparkles size={24} color={AuraColors.primary} />}
+                            </TouchableOpacity>
+                        }
+                    />
+                    <AuraText variant="caption" color={AuraColors.gray600} style={{ marginTop: 8 }}>
+                        Prompt the architect to auto-draft mission parameters, budget, and milestones.
+                    </AuraText>
+                </AuraMotion>
+
                 {/* Mission Type Selection */}
                 <View style={styles.section}>
                     <AuraText variant="label" color={AuraColors.gray500} style={styles.sectionTitle}>KAAM CLASSIFICATION</AuraText>
@@ -399,7 +479,7 @@ export default function CreateGigScreen() {
                                             />
                                         </View>
                                         {i > 0 && (
-                                            <TouchableOpacity onPress={() => removeMilestone(i)} style={{ justifyContent: 'center', padding: 8 }}>
+                                            <TouchableOpacity onPress={() => removeMilestone(i)} style={{ justifyContent: 'center', padding: AuraSpacing.s }}>
                                                 <Trash2 size={20} color={AuraColors.error} />
                                             </TouchableOpacity>
                                         )}
@@ -478,7 +558,7 @@ export default function CreateGigScreen() {
                     ) : null}
 
                     {/* Platform Fee Transparency */}
-                    {pay && parseInt(pay) > 0 && (
+                    {pay && parseInt(pay, 10) > 0 && (
                         <AuraMotion type="slide">
                             <View style={styles.feeCard}>
                                 <View style={styles.feeHeader}>
@@ -486,16 +566,16 @@ export default function CreateGigScreen() {
                                     <AuraText variant="label" color={AuraColors.warning} style={{ marginLeft: 8 }}>PAYMENT BREAKDOWN</AuraText>
                                 </View>
                                 <View style={styles.feeRow}>
-                                    <AuraText variant="body" color={AuraColors.gray400}>Worker receives</AuraText>
-                                    <AuraText variant="bodyBold">₹{parseInt(pay)}</AuraText>
+                                    <AuraText variant="body" color={AuraColors.gray400}>Talent receives</AuraText>
+                                    <AuraText variant="bodyBold">₹{parseInt(pay, 10)}</AuraText>
                                 </View>
                                 <View style={styles.feeRow}>
                                     <AuraText variant="body" color={AuraColors.gray400}>Platform fee (15%)</AuraText>
-                                    <AuraText variant="bodyBold" color={AuraColors.gray500}>₹{Math.round(parseInt(pay) * 0.15)}</AuraText>
+                                    <AuraText variant="bodyBold" color={AuraColors.gray500}>₹{Math.round(parseInt(pay, 10) * 0.15)}</AuraText>
                                 </View>
                                 <View style={[styles.feeRow, styles.feeDivider]}>
                                     <AuraText variant="bodyBold">Total you pay</AuraText>
-                                    <AuraText variant="h3" color={AuraColors.primary}>₹{Math.round(parseInt(pay) * 1.15)}</AuraText>
+                                    <AuraText variant="h3" color={AuraColors.primary}>₹{Math.round(parseInt(pay, 10) * 1.15)}</AuraText>
                                 </View>
                                 <AuraText variant="caption" color={AuraColors.gray600} style={{ marginTop: 8 }}>
                                     Funds held in escrow until delivery confirmed
@@ -572,11 +652,21 @@ const styles = StyleSheet.create({
         paddingHorizontal: AuraSpacing.xl,
         gap: 12,
     },
+    aiCommandBox: {
+        marginHorizontal: AuraSpacing.xl,
+        padding: AuraSpacing.xl,
+        backgroundColor: 'rgba(0, 122, 255, 0.05)',
+        borderRadius: 32,
+        borderWidth: 2,
+        borderColor: 'rgba(0, 122, 255, 0.15)',
+        marginBottom: 32,
+        borderStyle: 'dashed',
+    },
     categoryBtn: {
         width: 100,
-        padding: 16,
+        padding: AuraSpacing.l,
         backgroundColor: AuraColors.surfaceElevated,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         alignItems: 'center',
         borderWidth: 1.5,
         borderColor: AuraColors.gray800,
@@ -644,7 +734,7 @@ const styles = StyleSheet.create({
     },
     priorityBtn: {
         flex: 1,
-        paddingVertical: 16,
+        paddingVertical: AuraSpacing.l,
         backgroundColor: AuraColors.surfaceElevated,
         borderRadius: 20,
         alignItems: 'center',

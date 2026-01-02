@@ -1,17 +1,11 @@
 import React from 'react';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { View, StyleSheet, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraColors, AuraBorderRadius } from '../theme/aura';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from './AuraText';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { MapPin, Navigation, Shield, Target } from 'lucide-react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import * as Location from 'expo-location';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAura } from '../context/AuraProvider';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
 type LocationPickerProps = {
     onLocationSelect: (location: { lat: number; lng: number }) => void;
@@ -59,8 +53,8 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
             }
             showToast({ message: 'Coordinates Locked', type: 'success' });
         } catch (error) {
-            console.error('[Location] Error:', error);
-            showToast({ message: 'GPS Node Unresponsive. Try again.', type: 'error' });
+            if (__DEV__) console.error(error);
+            showToast({ message: 'GPS failed. Please enable location services.', type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -68,7 +62,8 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
 
     function openMaps() {
         if (selectedLocation) {
-            const url = `https://www.google.com/maps/search/?api=1&query=${selectedLocation.lat},${selectedLocation.lng}`;
+            // 🗺️ USING OPENSTREETMAP (100% FREE & OPEN)
+            const url = `https://www.openstreetmap.org/?mlat=${selectedLocation.lat}&mlon=${selectedLocation.lng}#map=15/${selectedLocation.lat}/${selectedLocation.lng}`;
             Linking.openURL(url);
         }
     }
@@ -110,7 +105,7 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
             <View style={styles.privacyNote}>
                 <Shield color={AuraColors.gray600} size={12} />
                 <AuraText variant="caption" color={AuraColors.gray600}>
-                    Exact coordinates obfuscated until operative deployment is authorized.
+                    Exact coordinates obfuscated until talent deployment is authorized.
                 </AuraText>
             </View>
         </View>

@@ -1,67 +1,49 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { View, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
-import { supabase } from '@api/supabase';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
+import { Repository } from '@api/repository';
 import { AuraColors, AuraShadows } from '@theme/aura';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraText } from '@core/components/AuraText';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraHeader } from '@core/components/AuraHeader';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraListItem } from '@core/components/AuraListItem';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraMotion } from '@core/components/AuraMotion';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import {
     Briefcase, Wallet, Settings,
     LogOut, User, ChevronRight, Zap, Shield,
     Bell, ExternalLink
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAura } from '@core/context/AuraProvider';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { useAuth } from '@context/AuthProvider';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 
-const { width } = Dimensions.get('window');
+
 
 export default function ClientProfileScreen() {
     const haptics = useAuraHaptics();
     const navigation = useNavigation<any>();
-    const { user, profile } = useAuth();
+    const { user, profile, signOut } = useAuth();
     const { showDialog } = useAura();
     const [stats, setStats] = useState({ posted: 0, active: 0, completed: 0 });
 
-    useEffect(() => {
-        if (user) {
-            fetchStats();
-        }
+    const fetchStats = useCallback(async () => {
+        if (!user) return;
+        const { data } = await Repository.getClientGigStats(user.id);
+        if (data) setStats(data);
     }, [user]);
 
-    const fetchStats = async () => {
-        if (!user) return;
-        const { data: gigs } = await supabase.from('gigs').select('status').eq('client_id', user.id);
-        if (gigs) {
-            setStats({
-                posted: gigs.length,
-                active: gigs.filter(g => g.status === 'active' || g.status === 'open').length,
-                completed: gigs.filter(g => g.status === 'completed').length
-            });
-        }
-    };
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
 
     const handleLogout = () => {
         haptics.warning();
         showDialog({
-            title: 'De-authorize Console',
-            message: 'Synchronized session will be terminated and all encrypted tunnels closed. Continue?',
+            title: 'Sign Out',
+            message: 'Your local session will be closed.',
             type: 'warning',
             onConfirm: async () => {
                 haptics.heavy();
-                await supabase.auth.signOut();
+                await signOut();
             }
         });
     };
@@ -137,6 +119,7 @@ export default function ClientProfileScreen() {
                     />
                 </AuraMotion>
 
+                {/* Config Nodes */}
                 <AuraMotion type="slide" delay={400} style={styles.sectionHeader}>
                     <AuraText variant="label" color={AuraColors.gray600} style={{ fontWeight: '900', letterSpacing: 2 }}>CONFIG NODES</AuraText>
                 </AuraMotion>
@@ -160,12 +143,12 @@ export default function ClientProfileScreen() {
                 <AuraMotion type="slide" delay={600}>
                     <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
                         <LogOut size={20} color={AuraColors.error} />
-                        <AuraText variant="bodyBold" color={AuraColors.error} style={{ marginLeft: 16, letterSpacing: 1 }}>TERMINATE SESSION</AuraText>
+                        <AuraText variant="bodyBold" color={AuraColors.error} style={{ marginLeft: 16, letterSpacing: 1 }}>SIGN OUT</AuraText>
                     </TouchableOpacity>
                 </AuraMotion>
 
                 <AuraText variant="caption" align="center" color={AuraColors.gray700} style={{ marginTop: 56, marginBottom: 120, letterSpacing: 2 }}>
-                    AURA TALENT NETWORK v3.1.0 • AES-256
+                    OpSkl CORE v1.0.0-BHARAT • AES-256
                 </AuraText>
             </ScrollView>
         </View>
@@ -200,11 +183,9 @@ const styles = StyleSheet.create({
         ...AuraShadows.floating,
     },
     roleBadge: {
-        position: 'absolute',
-        bottom: -12,
         backgroundColor: AuraColors.white,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: AuraSpacing.l,
+        paddingVertical: AuraSpacing.s,
         borderRadius: 14,
         flexDirection: 'row',
         alignItems: 'center',
@@ -226,7 +207,7 @@ const styles = StyleSheet.create({
         width: 1,
         height: 28,
         backgroundColor: AuraColors.gray200,
-        marginHorizontal: 12,
+        marginHorizontal: AuraSpacing.m,
     },
     sectionHeader: {
         paddingHorizontal: 32,
@@ -252,7 +233,7 @@ const styles = StyleSheet.create({
         marginTop: 56,
         height: 72,
         backgroundColor: 'rgba(255, 69, 58, 0.04)',
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 24,

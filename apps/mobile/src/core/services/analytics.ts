@@ -54,8 +54,9 @@ class AnalyticsService {
                 };
 
                 await supabase.from('analytics_events').insert(eventData);
-            } catch (e) {
-                console.warn('[Analytics] Persist Error:', e);
+            } catch (error) {
+            if (__DEV__) console.error(error);
+                console.error('Analytics track error:', error);
             }
         }
     }
@@ -75,8 +76,9 @@ class AnalyticsService {
         
         try {
             await supabase.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', userId);
-        } catch (e) {
-            console.warn('[Analytics] Identify Sync Error:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            console.error('Analytics updateLastSeen error:', error);
         }
     }
 

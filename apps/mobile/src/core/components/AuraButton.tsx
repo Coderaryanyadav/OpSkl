@@ -3,7 +3,6 @@ import { Pressable, Text, StyleSheet, ViewStyle, ActivityIndicator, View } from 
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { AuraColors, AuraTypography, AuraBorderRadius, AuraShadows, AuraGradients } from '../theme/aura';
-import { useAuraHaptics } from '../hooks/useAuraHaptics';
 // Keeping for type if needed, but we'll use hook
 
 interface AuraButtonProps {
@@ -28,7 +27,7 @@ export const AuraButton: React.FC<AuraButtonProps> = ({
     icon,
 }) => {
     const scale = useSharedValue(1);
-    const haptics = useAuraHaptics();
+
 
     const handlePressIn = () => {
         if (disabled || loading) return;

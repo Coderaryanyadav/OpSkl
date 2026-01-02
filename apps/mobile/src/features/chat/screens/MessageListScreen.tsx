@@ -14,6 +14,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { MessageSquare, Search, ShieldCheck } from 'lucide-react-native';
 import { AuraInput } from '@core/components/AuraInput';
 import { useAuth } from '@context/AuthProvider';
+import { useAura } from '@core/context/AuraProvider';
 
 dayjs.extend(relativeTime);
 
@@ -40,7 +41,7 @@ const ChatListItem = React.memo(({ item, index, onPress }: { item: any; index: n
                 <View style={styles.chatContent}>
                     <View style={styles.chatHeader}>
                         <AuraText variant="h3" numberOfLines={1} style={{ flex: 1, fontSize: 18 }}>
-                            {otherParticipant?.full_name || "Unknown Operative"}
+                            {otherParticipant?.full_name || "Unknown Talent"}
                         </AuraText>
                         <AuraText variant="caption" color={AuraColors.gray400}>
                             {lastMsg ? dayjs(lastMsg.created_at).fromNow(true) : ''}
@@ -64,9 +65,10 @@ const ChatListItem = React.memo(({ item, index, onPress }: { item: any; index: n
 });
 
 export default function MessageListScreen() {
-    const haptics = useAuraHaptics();
+
     const navigation = useNavigation<any>();
     const { user } = useAuth();
+    const { showToast } = useAura();
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -114,13 +116,14 @@ export default function MessageListScreen() {
                 });
                 setRooms(processed);
             }
-        } catch (e) {
-            console.error('[MessageList] Fetch Error:', e);
+        } catch (error) {
+            if (__DEV__) console.error(error);
+            showToast({ message: 'Failed to load messages. Please check your connection.', type: 'error' });
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [user]);
+    }, [user, showToast]);
 
     useEffect(() => {
         fetchRooms();
@@ -139,7 +142,7 @@ export default function MessageListScreen() {
         const otherParticipant = room.participants?.[0]?.profiles;
         navigation.navigate('Chat', {
             roomId: room.id,
-            recipientName: otherParticipant?.full_name || "Operative"
+            recipientName: otherParticipant?.full_name || "Talent"
         });
     }, [navigation]);
 
@@ -234,8 +237,8 @@ const styles = StyleSheet.create({
     },
     chatItem: {
         flexDirection: 'row',
-        paddingVertical: 16,
-        paddingHorizontal: 16,
+        paddingVertical: AuraSpacing.l,
+        paddingHorizontal: AuraSpacing.l,
         backgroundColor: AuraColors.surfaceElevated,
         borderRadius: AuraBorderRadius.xl,
         marginBottom: 12,
@@ -282,7 +285,7 @@ const styles = StyleSheet.create({
     },
     skeletonItem: {
         flexDirection: 'row',
-        padding: 16,
+        padding: AuraSpacing.l,
         backgroundColor: AuraColors.surfaceElevated,
         borderRadius: AuraBorderRadius.xl,
         marginBottom: 12,

@@ -5,7 +5,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { AuraColors } from '@theme/aura';
 import { PlusSquare, User, Briefcase, MessageSquare, Zap, LayoutDashboard } from 'lucide-react-native';
-import { useAuraHaptics } from '@core/hooks/useAuraHaptics';
 import { AuraLoader } from '@core/components/AuraLoader';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@context/AuthProvider';
@@ -15,13 +14,13 @@ import LoginScreen from '@features/auth/screens/LoginScreen';
 import SignUpScreen from '@features/auth/screens/SignUpScreen';
 import OnboardingScreen from '@features/auth/screens/OnboardingScreen';
 
-// Screens - Worker / Talent
-import WorkerFeedScreen from '@features/worker/screens/WorkerFeedScreen';
-import WorkerMyGigsScreen from '@features/worker/screens/WorkerMyGigsScreen';
+// Screens - Talent / Talent
+import TalentFeedScreen from '@features/talent/screens/TalentFeedScreen';
+import TalentMyGigsScreen from '@features/talent/screens/TalentMyGigsScreen';
 import GigDetailsScreen from '@features/gig-discovery/screens/GigDetailsScreen';
-import ReviewScreen from '@features/worker/screens/ReviewScreen';
+import ReviewScreen from '@features/talent/screens/ReviewScreen';
 import DisputeScreen from '@features/gig-discovery/screens/DisputeScreen';
-import TalentPerksScreen from '@features/worker/screens/TalentPerksScreen';
+import TalentPerksScreen from '@features/talent/screens/TalentPerksScreen';
 
 // Screens - Client
 import CreateGigScreen from '@features/client/screens/CreateGigScreen';
@@ -53,7 +52,7 @@ const Tab = createBottomTabNavigator();
 
 // --- CUSTOM TAB BAR COMPONENT ---
 function AuraTabBar({ state, descriptors, navigation }: any) {
-    const haptics = useAuraHaptics();
+
 
     return (
         <View style={styles.tabBarContainer}>
@@ -104,12 +103,12 @@ function TalentTabs() {
         >
             <Tab.Screen
                 name="Feed"
-                component={WorkerFeedScreen}
+                component={TalentFeedScreen}
                 options={{ tabBarIcon: (props: any) => <Zap {...props} /> }}
             />
             <Tab.Screen
                 name="MyGigs"
-                component={WorkerMyGigsScreen}
+                component={TalentMyGigsScreen}
                 options={{ tabBarIcon: (props: any) => <Briefcase {...props} /> }}
             />
             <Tab.Screen

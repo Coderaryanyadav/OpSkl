@@ -12,34 +12,29 @@ import { AuraHeader } from '@core/components/AuraHeader';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuth } from '@context/AuthProvider';
+import { Repository } from '@api/repository';
 
 export default function GigManagerScreen() {
     const route = useRoute();
     const navigation = useNavigation<any>();
-    const { showDialog, showToast } = useAura();
+    const { showDialog, showToast, addReputation } = useAura();
     const { user } = useAuth();
     const haptics = useAuraHaptics();
     const { gigId } = route.params as { gigId: string };
 
     const [applicants, setApplicants] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+
     const [gigDetails, setGigDetails] = useState<any>(null);
 
     const fetchGigDetails = useCallback(async () => {
-        const { data } = await supabase.from('gigs').select('*').eq('id', gigId).single();
+        const { data } = await Repository.getGigDetails(gigId);
         setGigDetails(data);
     }, [gigId]);
 
     const fetchApplicants = useCallback(async () => {
-        const { data } = await supabase
-            .from('applications')
-            .select('*, profiles:worker_id(*)')
-            .eq('gig_id', gigId)
-            .in('status', ['pending', 'accepted'])
-            .order('created_at', { ascending: false });
+        const { data } = await Repository.getApplicants(gigId);
+        if (data) setApplicants(data.filter(a => ['pending', 'accepted'].includes(a.status)));
 
-        if (data) setApplicants(data);
-        setLoading(false);
     }, [gigId]);
 
     useEffect(() => {
@@ -59,7 +54,7 @@ export default function GigManagerScreen() {
         if (decision === 'accepted') {
             showDialog({
                 title: 'Confirm Deployment',
-                message: 'Authorizing this operative will assign the mission and notify all other applicants. Proceed?',
+                message: 'Authorizing this talent will assign the mission and notify all other applicants. Proceed?',
                 type: 'warning',
                 onConfirm: () => processDecision(applicationId, decision)
             });
@@ -69,72 +64,70 @@ export default function GigManagerScreen() {
     };
 
     const processDecision = async (applicationId: string, decision: 'accepted' | 'rejected') => {
-        setLoading(true);
-        const { error } = await supabase
-            .from('applications')
-            .update({ status: decision })
-            .eq('id', applicationId);
+
+        const { error } = await Repository.updateApplicationStatus(applicationId, decision);
 
         if (!error) {
             if (decision === 'accepted') {
-                const workerId = applicants.find(a => a.id === applicationId)?.worker_id;
+                const talentId = applicants.find(a => a.id === applicationId)?.talent_id;
 
-                // Update gig status and assign worker
-                await supabase.from('gigs').update({
-                    assigned_worker_id: workerId,
+                // Update gig status and assign talent
+                await Repository.updateGig(gigId, {
+                    assigned_talent_id: talentId,
                     status: 'active'
-                }).eq('id', gigId);
+                });
 
                 // Create escrow transaction
-                if (gigDetails && workerId && user) {
-                    await supabase.from('escrow_transactions').insert({
+                if (gigDetails && talentId && user) {
+                    await Repository.createEscrow({
                         gig_id: gigId,
                         client_id: user.id,
-                        worker_id: workerId,
+                        talent_id: talentId,
                         amount_cents: gigDetails.pay_amount_cents || (gigDetails.budget * 100),
                         status: 'held'
                     });
                 }
 
                 // Create/Access Chat Room
-                await supabase.from('chat_rooms').upsert({ gig_id: gigId, type: 'assignment' });
+                await Repository.createChatRoom(gigId);
 
                 showToast({ message: "Personnel Deployed Successfully", type: 'success' });
                 haptics.success();
+                addReputation(200);
             } else {
                 showToast({ message: "Application Declined", type: 'info' });
             }
             fetchApplicants();
         } else {
-            setLoading(false);
+
             showToast({ message: error.message, type: 'error' });
         }
     };
 
     const renderApplicant = ({ item, index }: { item: any, index: number }) => {
-        const worker = item.profiles;
+        const talent = item.profiles;
         const isPending = item.status === 'pending';
 
         return (
             <AuraMotion type="slide" delay={index * 60}>
                 <View style={[styles.applicantCard, !isPending && styles.acceptedCard]}>
                     <View style={styles.cardHeader}>
-                        <AuraAvatar source={worker?.avatar_url} size={64} />
+                        <AuraAvatar source={talent?.avatar_url} size={64} />
                         <View style={styles.headerInfo}>
                             <View style={styles.nameRow}>
-                                <AuraText variant="h3">{worker?.full_name}</AuraText>
+                                <AuraText variant="h3">{talent?.full_name}</AuraText>
                                 <View style={styles.scoreBadge}>
                                     <Star size={12} color={AuraColors.primary} fill={AuraColors.primary} />
                                     <AuraText variant="label" style={{ marginLeft: 4, color: AuraColors.primary }}>4.9</AuraText>
                                 </View>
                             </View>
-                            <AuraText variant="caption" color={AuraColors.gray500}>TRUST IDX: {worker?.trust_score || '98'}% • ELITE</AuraText>
+                            <AuraText variant="caption" color={AuraColors.gray500}>TRUST IDX: {talent?.trust_score || '98'}% • ELITE</AuraText>
                         </View>
                     </View>
 
                     <View style={styles.pitchContainer}>
                         <AuraText variant="body" color={AuraColors.gray300}>
-                            {item.message || "Operative is ready for deployment. Briefing details requested upon arrival."}
+                            {item.message || "Talent is ready for deployment. Briefing details requested upon arrival."}
                         </AuraText>
                     </View>
 
@@ -142,7 +135,7 @@ export default function GigManagerScreen() {
                         <View style={styles.actionRow}>
                             <TouchableOpacity
                                 style={styles.chatBtn}
-                                onPress={() => navigation.navigate('Chat', { roomId: `direct_${worker.id}`, recipientName: worker.full_name })}
+                                onPress={() => navigation.navigate('Chat', { roomId: `direct_${talent.id}`, recipientName: talent.full_name })}
                             >
                                 <MessageSquare color={AuraColors.primary} size={20} />
                             </TouchableOpacity>
@@ -165,7 +158,7 @@ export default function GigManagerScreen() {
                         <AuraButton
                             title="FINALIZE MISSION"
                             variant="primary"
-                            onPress={() => navigation.navigate('Review', { gigId, targetUserId: worker.id, targetUserName: worker.full_name })}
+                            onPress={() => navigation.navigate('Review', { gigId, targetUserId: talent.id, targetUserName: talent.full_name })}
                             icon={<Target size={18} color={AuraColors.white} />}
                         />
                     )}
@@ -204,7 +197,7 @@ export default function GigManagerScreen() {
                     <View style={styles.emptyState}>
                         <ActivityIndicator color={AuraColors.primary} />
                         <AuraText variant="body" color={AuraColors.gray500} style={{ marginTop: 16 }}>
-                            Listening for incoming operative signals...
+                            Listening for incoming talent signals...
                         </AuraText>
                     </View>
                 }
@@ -274,13 +267,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(0, 122, 255, 0.1)',
-        paddingHorizontal: 8,
+        paddingHorizontal: AuraSpacing.s,
         paddingVertical: 4,
-        borderRadius: 8,
+        borderRadius: AuraBorderRadius.s,
     },
     pitchContainer: {
         backgroundColor: 'rgba(255,255,255,0.02)',
-        padding: 16,
+        padding: AuraSpacing.l,
         borderRadius: 16,
         marginVertical: 20,
         borderWidth: 1,

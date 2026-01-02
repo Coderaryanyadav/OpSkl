@@ -13,8 +13,9 @@ import { AuraBadge } from '@core/components/AuraBadge';
 import { AuraMotion } from '@core/components/AuraMotion';
 import { useAura } from '@core/context/AuraProvider';
 import { useAuth } from '@context/AuthProvider';
-import { useWalletStore } from '@store/useWalletStore';
 import { BiometricService } from '@core/services/biometrics';
+import { Repository } from '@core/api/repository';
+import { Transaction } from '@types';
 
 dayjs.extend(relativeTime);
 
@@ -22,13 +23,22 @@ const RAZORPAY_KEY = process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || '';
 
 export default function WalletScreen() {
     const haptics = useAuraHaptics();
-    const { showDialog, showToast } = useAura();
-    const { user } = useAuth();
-    const { profile } = useAuth();
+    const { showDialog, showToast, wallet, refreshData, loading: globalLoading } = useAura();
+    const { user, profile } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
-    const [upiId, setUpiId] = useState(profile?.upi_id || 'notlinked@upi');
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [localLoading, setLocalLoading] = useState(true);
+    const [upiId] = useState(profile?.upi_id || 'notlinked@upi');
 
     const DAILY_LIMIT = 50000;
+
+    const fetchTransactions = useCallback(async () => {
+        if (!user) return;
+        const { data } = await Repository.getTransactions(user.id);
+        if (data) setTransactions(data);
+        setLocalLoading(false);
+    }, [user]);
+
     const dailySpend = useMemo(() => {
         return transactions
             .filter(tx => tx.type === 'debit' && dayjs(tx.created_at).isSame(dayjs(), 'day'))
@@ -37,9 +47,12 @@ export default function WalletScreen() {
 
     const handleSync = useCallback(async () => {
         if (user) {
-            await sync(user.id);
+            await Promise.all([
+                refreshData(),
+                fetchTransactions()
+            ]);
         }
-    }, [user, sync]);
+    }, [user, refreshData, fetchTransactions]);
 
     useEffect(() => {
         handleSync();
@@ -112,7 +125,12 @@ export default function WalletScreen() {
             currency: 'INR',
             key: RAZORPAY_KEY,
             amount: amount * 100,
-            name: 'AURA BHARAT',
+            name: 'OpSkl',
+            prefill: {
+                contact: profile?.phone || '',
+                email: profile?.email || '',
+                name: profile?.full_name || ''
+            },
             theme: { color: AuraColors.primary }
         };
 
@@ -131,6 +149,8 @@ export default function WalletScreen() {
             maximumFractionDigits: 2
         });
     }, [wallet?.balance]);
+
+    const isLoading = globalLoading || localLoading;
 
     return (
         <View style={styles.container}>
@@ -225,7 +245,7 @@ export default function WalletScreen() {
                 </View>
 
                 <View style={styles.ledgerList}>
-                    {loading ? (
+                    {isLoading ? (
                         <View style={styles.loaderBox}>
                             <ActivityIndicator color={AuraColors.primary} />
                         </View>
@@ -243,7 +263,7 @@ export default function WalletScreen() {
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <AuraText variant="bodyBold" numberOfLines={1}>{tx.description}</AuraText>
-                                        <AuraText variant="caption" color={AuraColors.textSecondary}>{dayjs(tx.created_at).fromNow().toUpperCase()}</AuraText>
+                                        <AuraText variant="caption" color={AuraColors.gray500}>{dayjs(tx.created_at).fromNow().toUpperCase()}</AuraText>
                                     </View>
                                     <View style={{ alignItems: 'flex-end' }}>
                                         <AuraText variant="bodyBold" color={tx.type === 'credit' ? AuraColors.success : AuraColors.white}>
@@ -282,7 +302,7 @@ const styles = StyleSheet.create({
         paddingTop: 20,
     },
     balanceCard: {
-        padding: 32,
+        padding: AuraSpacing.xxl,
         backgroundColor: AuraColors.surfaceElevated,
         borderRadius: AuraBorderRadius.xxl,
         alignItems: 'center',
@@ -294,7 +314,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(52, 199, 89, 0.05)',
-        paddingHorizontal: 12,
+        paddingHorizontal: AuraSpacing.m,
         paddingVertical: 6,
         borderRadius: 20,
         borderWidth: 1,
@@ -335,16 +355,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: AuraColors.surfaceElevated,
-        padding: 16,
+        padding: AuraSpacing.l,
         borderRadius: 20,
         marginTop: 24,
         borderWidth: 1,
         borderColor: AuraColors.gray800,
     },
     miniToggle: {
-        paddingHorizontal: 12,
+        paddingHorizontal: AuraSpacing.m,
         paddingVertical: 4,
-        borderRadius: 12,
+        borderRadius: AuraBorderRadius.m,
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderWidth: 1,
         borderColor: AuraColors.gray800,
@@ -380,9 +400,9 @@ const styles = StyleSheet.create({
     txItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: AuraSpacing.l,
         backgroundColor: AuraColors.surfaceElevated,
-        borderRadius: 24,
+        borderRadius: AuraBorderRadius.xl,
         gap: 16,
         borderWidth: 1,
         borderColor: AuraColors.gray800,

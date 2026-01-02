@@ -25,7 +25,9 @@ export const validateUrl = (url: string): boolean => {
     try {
         const _url = new URL(url);
         return true;
-    } catch {
+    } catch (error) {
+            if (__DEV__) console.error(error);
+        console.error('URL validation error:', error);
         return /^(http|https):\/\/[^ "]+$/.test(url);
     }
 };
@@ -47,7 +49,9 @@ export const validateJson = (jsonString: string): boolean => {
     try {
         const o = JSON.parse(jsonString);
         return (o && typeof o === 'object');
-    } catch {
+    } catch (error) {
+            if (__DEV__) console.error(error);
+        console.error('Phone validation error:', error);
         return false;
     }
 };

@@ -31,8 +31,9 @@ export const useWalletStore = create<WalletState>()(
                     state.loading = false;
                 });
             } catch (error) {
-                set((state) => { state.loading = false; });
-                console.error('[WalletStore] Sync failed:', error);
+            if (__DEV__) console.error(error);
+                console.error('Wallet fetch error:', error);
+            } finally {  set((state) => { state.loading = false; });
             }
         },
     }))
